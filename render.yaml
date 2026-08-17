@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: paystack-cloud
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PORT
+        value: 3000
+    plan: free

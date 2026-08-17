@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PayStack Cloud – Banking Portal</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/manrope@5.2.8/index.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/space-grotesk@5.2.10/index.css" rel="stylesheet" />
+<style>
+  /* ── Design Tokens ── (unchanged from original) */
+  :root {
+    --clr-bg:        #F0F4FB;
+    --clr-surface:   #FFFFFF;
+    --clr-surface2:  #F7F9FE;
+    --clr-border:    #DDE3F0;
+    --clr-accent:    #1A56DB;
+    --clr-accent-dk: #1540A8;
+    --clr-accent-lt: #EBF0FD;
+    --clr-success:   #0D9488;
+    --clr-success-lt:#ECFDF5;
+    --clr-danger:    #DC2626;
+    --clr-warn:      #D97706;
+    --clr-text:      #111827;
+    --clr-muted:     #6B7280;
+    --clr-label:     #374151;
+    --clr-inv:       #7C3AED;
+    --clr-inv-lt:    #F5F3FF;
+    --clr-cur:       #1A56DB;
+    --clr-cur-lt:    #EBF0FD;
+    --clr-sav:       #0D9488;
+    --clr-sav-lt:    #ECFDF5;
+    --radius-sm:     6px;
+    --radius-md:     12px;
+    --radius-lg:     18px;
+    --shadow-sm:     0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md:     0 4px 16px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06);
+    --shadow-lg:     0 12px 40px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.08);
+    --font-body:     "Manrope Variable", "Segoe UI", system-ui, sans-serif;
+    --font-num:      "Space Grotesk Variable", "Manrope Variable", monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 15px; }
+  body {
+    font-family: var(--font-body);
+    background: var(--clr-bg);
+    color: var(--clr-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top Nav ── */
+  .topnav {
+    background: var(--clr-accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    box-shadow: 0 2px 10px rgba(26,86,219,.3);
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-num);
+    font-weight: 700; font-size: 1.28rem; letter-spacing: -.3px;
+  }
+  .nav-brand .logo-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-brand .logo-icon svg { display: block; }
+  .nav-links { display: flex; align-items: center; gap: 6px; }
+  .nav-links a {
+    color: rgba(255,255,255,.82); text-decoration: none;
+    padding: 6px 13px; border-radius: 7px; font-size: .87rem;
+    font-weight: 500; transition: background .15s;
+  }
+  .nav-links a:hover, .nav-links a.active {
+    background: rgba(255,255,255,.18); color: #fff;
+  }
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+  .nav-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,.22); border: 2px solid rgba(255,255,255,.4);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .83rem; color: #fff; cursor: pointer;
+  }
+  .nav-user { font-size: .82rem; color: rgba(255,255,255,.82); }
+
+  /* ── Layout ── */
+  .app-body {
+    display: flex; flex: 1;
+  }
+  .sidebar {
+    width: 230px; min-width: 230px;
+    background: var(--clr-surface);
+    border-right: 1px solid var(--clr-border);
+    padding: 22px 0 32px;
+    display: flex; flex-direction: column; gap: 2px;
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    padding: 6px 16px 3px;
+    font-size: .70rem; font-weight: 700; letter-spacing: .06em;
+    color: var(--clr-muted); text-transform: uppercase;
+    margin-top: 10px;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px; cursor: pointer;
+    font-size: .875rem; font-weight: 500; color: var(--clr-label);
+    border-radius: 0; transition: background .14s, color .14s;
+    position: relative; text-decoration: none;
+    border-left: 3px solid transparent;
+  }
+  .sidebar-item:hover { background: var(--clr-accent-lt); color: var(--clr-accent); }
+  .sidebar-item.active {
+    background: var(--clr-accent-lt); color: var(--clr-accent);
+    border-left-color: var(--clr-accent); font-weight: 700;
+  }
+  .sidebar-item svg { flex-shrink: 0; }
+  .sidebar-badge {
+    margin-left: auto; background: var(--clr-accent);
+    color: #fff; font-size: .65rem; font-weight: 700;
+    padding: 1px 6px; border-radius: 20px;
+  }
+
+  /* ── Main ── */
+  .main-content {
+    flex: 1; overflow-y: auto;
+    padding: 28px 32px;
+  }
+  .page-title {
+    font-family: var(--font-num);
+    font-size: 1.45rem; font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--clr-text);
+  }
+  .page-sub { font-size: .85rem; color: var(--clr-muted); margin-bottom: 24px; }
+
+  /* ── Account Cards ── */
+  .accounts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px; margin-bottom: 32px;
+  }
+  .account-card {
+    border-radius: var(--radius-lg);
+    padding: 22px 22px 18px;
+    box-shadow: var(--shadow-sm);
+    position: relative; overflow: hidden;
+    cursor: pointer; transition: transform .16s, box-shadow .16s;
+  }
+  .account-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .account-card.inv { background: linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%); color: #fff; }
+  .account-card.cur { background: linear-gradient(135deg, #1540A8 0%, #1A56DB 100%); color: #fff; }
+  .account-card.sav { background: linear-gradient(135deg, #0F766E 0%, #0D9488 100%); color: #fff; }
+  .account-card .card-pattern {
+    position: absolute; right: -18px; top: -18px;
+    width: 110px; height: 110px; border-radius: 50%;
+    background: rgba(255,255,255,.1);
+  }
+  .account-card .card-pattern2 {
+    position: absolute; right: 22px; bottom: -30px;
+    width: 80px; height: 80px; border-radius: 50%;
+    background: rgba(255,255,255,.07);
+  }
+  .card-type {
+    font-size: .72rem; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; opacity: .78; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card-type svg { opacity: .9; }
+  .card-balance {
+    font-family: var(--font-num);
+    font-size: 1.55rem; font-weight: 700;
+    line-height: 1.1; margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .card-label { font-size: .76rem; opacity: .72; margin-bottom: 14px; }
+  .card-acct-no {
+    font-family: var(--font-num);
+    font-size: .78rem; opacity: .7; letter-spacing: .04em;
+  }
+  .card-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .card-btn {
+    flex: 1; padding: 7px 0; border: 1.5px solid rgba(255,255,255,.38);
+    background: rgba(255,255,255,.14); color: #fff;
+    border-radius: 8px; cursor: pointer;
+    font-size: .78rem; font-weight: 600; font-family: var(--font-body);
+    transition: background .14s;
+  }
+  .card-btn:hover { background: rgba(255,255,255,.28); }
+
+  /* ── Quick Actions ── */
+  .quick-actions {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px;
+  }
+  .qa-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: var(--clr-surface); border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md); padding: 14px 20px; cursor: pointer;
+    transition: box-shadow .15s, border-color .15s;
+    min-width: 90px;
+  }
+  .qa-btn:hover { box-shadow: var(--shadow-sm); border-color: var(--clr-accent); }
+  .qa-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qa-icon.blue  { background: var(--clr-accent-lt); color: var(--clr-accent); }
+  .qa-icon.green { background: var(--clr-success-lt); color: var(--clr-success); }
+  .qa-icon.purple{ background: var(--clr-inv-lt); color: var(--clr-inv); }
+  .qa-icon.orange{ background: #FEF3C7; color: var(--clr-warn); }
+  .qa-icon.red   { background: #FEE2E2; color: var(--clr-danger); }
+  .qa-label { font-size: .75rem; font-weight: 600; color: var(--clr-label); text-align: center; }
+
+  /* ── Panel Tabs ── */
+  .panel {
+    background: var(--clr-surface); border: 1px solid var(--clr-border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+    overflow: hidden; margin-bottom: 24px;
+  }
+  .panel-tabs {
+    display: flex; border-bottom: 1px solid var(--clr-border);
+    padding: 0 20px; background: var(--clr-surface2);
+  }
+  .tab-btn {
+    padding: 13px 18px; font-size: .85rem; font-weight: 600;
+    color: var(--clr-muted); cursor: pointer; border: none;
+    background: none; border-bottom: 2.5px solid transparent;
+    margin-bottom: -1px; transition: color .14s, border-color .14s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--clr-accent); }
+  .tab-btn.active { color: var(--clr-accent); border-bottom-color: var(--clr-accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .panel-body { padding: 24px 24px; }
+
+  /* ── Transfer Form ── */
+  .transfer-form { max-width: 620px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-group { margin-bottom: 18px; }
+  .form-group label {
+    display: block; font-size: .8rem; font-weight: 700;
+    color: var(--clr-label); margin-bottom: 6px; letter-spacing: .01em;
+  }
+  .form-group label span.req { color: var(--clr-danger); margin-left: 2px; }
+  .form-control {
+    width: 100%; padding: 10px 13px;
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--radius-sm); background: var(--clr-surface);
+    font-family: var(--font-body); font-size: .88rem; color: var(--clr-text);
+    transition: border-color .15s, box-shadow .15s; outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  .form-control:focus {
+    border-color: var(--clr-accent);
+    box-shadow: 0 0 0 3px rgba(26,86,219,.12);
+  }
+  .form-control.error { border-color: var(--clr-danger); }
+  .form-hint { font-size: .74rem; color: var(--clr-muted); margin-top: 4px; }
+  .form-error { font-size: .74rem; color: var(--clr-danger); margin-top: 4px; display: none; }
+  .form-verified {
+    font-size: .74rem; color: var(--clr-success); margin-top: 4px;
+    display: none; font-weight: 600;
+  }
+  .input-icon-wrap { position: relative; }
+  .input-icon-wrap .form-control { padding-left: 38px; }
+  .input-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--clr-muted); pointer-events: none;
+  }
+  select.form-control { cursor: pointer; }
+  .amount-preview {
+    background: var(--clr-accent-lt); border-radius: var(--radius-sm);
+    padding: 12px 14px; margin-bottom: 18px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .amount-preview .ap-label { font-size: .78rem; color: var(--clr-accent); font-weight: 600; }
+  .amount-preview .ap-amount {
+    font-family: var(--font-num); font-size: 1.1rem; font-weight: 700;
+    color: var(--clr-accent); font-variant-numeric: tabular-nums;
+  }
+  .fee-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-top: 1px dashed var(--clr-border);
+    font-size: .8rem;
+  }
+  .fee-row .label { color: var(--clr-muted); }
+  .fee-row .value { font-family: var(--font-num); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .divider { height: 1px; background: var(--clr-border); margin: 16px 0; }
+  .step-indicator {
+    display: flex; align-items: center; gap: 0; margin-bottom: 24px;
+  }
+  .step {
+    display: flex; align-items: center; gap: 7px;
+    font-size: .78rem; font-weight: 600; color: var(--clr-muted);
+  }
+  .step.done { color: var(--clr-success); }
+  .step.active { color: var(--clr-accent); }
+  .step-circle {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .72rem; font-weight: 700; border: 2px solid currentColor;
+    flex-shrink: 0; background: transparent;
+  }
+  .step.done .step-circle { background: var(--clr-success); color: #fff; border-color: var(--clr-success); }
+  .step.active .step-circle { background: var(--clr-accent); color: #fff; border-color: var(--clr-accent); }
+  .step-line { flex: 1; height: 2px; background: var(--clr-border); margin: 0 4px; }
+  .step.done ~ .step-line { background: var(--clr-success); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 7px; padding: 10px 22px;
+    border-radius: var(--radius-sm); font-family: var(--font-body);
+    font-size: .875rem; font-weight: 700; cursor: pointer;
+    border: none; transition: background .15s, box-shadow .15s, transform .1s;
+    text-decoration: none; white-space: nowrap;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn-primary {
+    background: var(--clr-accent); color: #fff;
+    box-shadow: 0 2px 8px rgba(26,86,219,.25);
+  }
+  .btn-primary:hover { background: var(--clr-accent-dk); box-shadow: 0 4px 14px rgba(26,86,219,.35); }
+  .btn-outline {
+    background: transparent; color: var(--clr-accent);
+    border: 1.5px solid var(--clr-accent);
+  }
+  .btn-outline:hover { background: var(--clr-accent-lt); }
+  .btn-ghost {
+    background: transparent; color: var(--clr-muted);
+    border: 1.5px solid var(--clr-border);
+  }
+  .btn-ghost:hover { background: var(--clr-surface2); color: var(--clr-text); }
+  .btn-success {
+    background: var(--clr-success); color: #fff;
+    box-shadow: 0 2px 8px rgba(13,148,136,.22);
+  }
+  .btn-success:hover { background: #0f766e; }
+  .btn-lg { padding: 13px 28px; font-size: .95rem; }
+  .btn-sm { padding: 7px 14px; font-size: .78rem; }
+  .btn-block { width: 100%; }
+  .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* ── Recent Transactions Table ── */
+  .txn-table { width: 100%; border-collapse: collapse; }
+  .txn-table th {
+    text-align: left; font-size: .73rem; font-weight: 700;
+    color: var(--clr-muted); text-transform: uppercase; letter-spacing: .05em;
+    padding: 10px 16px; background: var(--clr-surface2);
+    border-bottom: 1px solid var(--clr-border);
+  }
+  .txn-table td {
+    padding: 13px 16px; font-size: .84rem;
+    border-bottom: 1px solid var(--clr-border);
+    vertical-align: middle;
+  }
+  .txn-table tr:last-child td { border-bottom: none; }
+  .txn-table tr:hover td { background: var(--clr-surface2); }
+  .txn-status {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 20px;
+    font-size: .72rem; font-weight: 700;
+  }
+  .txn-status.success { background: var(--clr-success-lt); color: var(--clr-success); }
+  .txn-status.pending { background: #FEF3C7; color: var(--clr-warn); }
+  .txn-status.failed { background: #FEE2E2; color: var(--clr-danger); }
+  .txn-amount { font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .txn-amount.debit { color: var(--clr-danger); }
+  .txn-amount.credit { color: var(--clr-success); }
+  .txn-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--clr-accent-lt); color: var(--clr-accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .75rem; margin-right: 8px; flex-shrink: 0;
+  }
+  .txn-name-cell { display: flex; align-items: center; }
+
+  /* ── Stats Row ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--clr-surface); border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md); padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .stat-card .st-label { font-size: .75rem; color: var(--clr-muted); font-weight: 600; margin-bottom: 6px; }
+  .stat-card .st-val {
+    font-family: var(--font-num); font-size: 1.2rem; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--clr-text);
+  }
+  .stat-card .st-change { font-size: .72rem; color: var(--clr-success); margin-top: 4px; font-weight: 600; }
+  .stat-card .st-change.neg { color: var(--clr-danger); }
+
+  /* ── PIN Entry ── */
+  .pin-grid {
+    display: grid; grid-template-columns: repeat(3, 56px);
+    gap: 10px; margin: 20px auto 0; justify-content: center;
+  }
+  .pin-key {
+    width: 56px; height: 56px; border-radius: 10px;
+    border: 1.5px solid var(--clr-border); background: var(--clr-surface);
+    font-size: 1.2rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .12s, border-color .12s;
+    font-family: var(--font-num);
+  }
+  .pin-key:hover { background: var(--clr-accent-lt); border-color: var(--clr-accent); color: var(--clr-accent); }
+  .pin-key.wide { grid-column: span 2; width: 100%; }
+  .pin-key.del { color: var(--clr-danger); }
+  .pin-dots {
+    display: flex; gap: 14px; justify-content: center; margin: 18px 0 8px;
+  }
+  .pin-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--clr-border); background: transparent;
+    transition: background .15s, border-color .15s;
+  }
+  .pin-dot.filled { background: var(--clr-accent); border-color: var(--clr-accent); }
+  .pin-label { text-align: center; font-size: .84rem; color: var(--clr-muted); }
+
+  /* ── Review Summary ── */
+  .review-box {
+    background: var(--clr-surface2); border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md); padding: 20px;
+    margin-bottom: 18px;
+  }
+  .review-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 8px 0; border-bottom: 1px solid var(--clr-border);
+    font-size: .84rem;
+  }
+  .review-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .review-row .rl { color: var(--clr-muted); font-weight: 500; }
+  .review-row .rv {
+    font-weight: 700; text-align: right; max-width: 60%;
+    font-variant-numeric: tabular-nums; font-family: var(--font-num);
+    word-break: break-all;
+  }
+  .review-total {
+    display: flex; justify-content: space-between;
+    padding: 12px 0 0; font-size: 1rem; font-weight: 800;
+    color: var(--clr-accent);
+  }
+  .review-total .rv {
+    font-family: var(--font-num); font-size: 1.1rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Modal Overlay ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(17,24,39,.55); backdrop-filter: blur(4px);
+    z-index: 500; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .22s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--clr-surface); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg); padding: 36px 36px 30px;
+    max-width: 480px; width: calc(100% - 40px);
+    transform: translateY(16px) scale(.97);
+    transition: transform .22s;
+    position: relative;
+  }
+  .modal-overlay.open .modal { transform: none; }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none; cursor: pointer;
+    color: var(--clr-muted); font-size: 1.3rem; line-height: 1;
+    padding: 4px; border-radius: 6px;
+  }
+  .modal-close:hover { color: var(--clr-danger); background: #FEE2E2; }
+
+  /* ── Success Modal ── */
+  .success-anim {
+    width: 78px; height: 78px; border-radius: 50%;
+    background: var(--clr-success-lt); border: 3px solid var(--clr-success);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    animation: pop .45s ease;
+  }
+  @keyframes pop {
+    0% { transform: scale(.5); opacity: 0; }
+    70% { transform: scale(1.12); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .success-title {
+    text-align: center; font-family: var(--font-num);
+    font-size: 1.5rem; font-weight: 800; color: var(--clr-text);
+    margin-bottom: 6px;
+  }
+  .success-sub {
+    text-align: center; font-size: .88rem;
+    color: var(--clr-muted); margin-bottom: 22px; line-height: 1.6;
+  }
+  .ref-badge {
+    background: var(--clr-surface2); border: 1px solid var(--clr-border);
+    border-radius: 8px; padding: 10px 16px; text-align: center;
+    margin-bottom: 20px;
+  }
+  .ref-badge .rl { font-size: .73rem; color: var(--clr-muted); font-weight: 600; }
+  .ref-badge .rv {
+    font-family: var(--font-num); font-size: 1.05rem;
+    font-weight: 800; color: var(--clr-text); letter-spacing: .06em;
+  }
+
+  /* ── Receipt ── */
+  #receiptArea {
+    display: none;
+    position: fixed; top: -9999px; left: 0; width: 100%;
+    background: #fff; z-index: -1;
+  }
+  @media print {
+    body > *:not(#receiptArea) { display: none !important; }
+    #receiptArea {
+      display: block !important;
+      position: static; top: 0;
+    }
+    .receipt-print {
+      max-width: 500px; margin: 0 auto; padding: 32px;
+      font-family: var(--font-body); color: #111;
+    }
+    .rp-logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 20px; font-family: var(--font-num);
+      font-size: 1.2rem; font-weight: 800;
+    }
+    .rp-logo .rp-icon {
+      width: 36px; height: 36px; background: var(--clr-accent);
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; color: #fff; font-size: 1rem; font-weight: 900;
+    }
+    .rp-header-badge {
+      background: #ECFDF5; border: 1px solid #A7F3D0;
+      border-radius: 20px; display: inline-flex; align-items: center;
+      gap: 5px; padding: 5px 14px; font-size: .8rem; font-weight: 700;
+      color: #059669; margin-bottom: 20px;
+    }
+    .rp-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 4px; }
+    .rp-date { font-size: .8rem; color: #6B7280; margin-bottom: 24px; }
+    .rp-row {
+      display: flex; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid #E5E7EB;
+      font-size: .875rem;
+    }
+    .rp-row:last-child { border-bottom: none; }
+    .rp-row .rp-l { color: #6B7280; font-weight: 500; }
+    .rp-row .rp-r { font-weight: 700; text-align: right; max-width: 55%; }
+    .rp-total {
+      display: flex; justify-content: space-between;
+      padding: 14px 0 0; font-size: 1.05rem; font-weight: 800;
+      color: #1A56DB; border-top: 2px solid #1A56DB; margin-top: 8px;
+    }
+    .rp-footer {
+      margin-top: 30px; text-align: center;
+      font-size: .75rem; color: #9CA3AF; border-top: 1px solid #E5E7EB;
+      padding-top: 14px;
+    }
+    .rp-divider { height: 1px; background: #E5E7EB; margin: 14px 0; }
+  }
+
+  /* ── Notification Toast ── */
+  .toast {
+    position: fixed; bottom: 28px; right: 24px;
+    background: var(--clr-text); color: #fff;
+    border-radius: var(--radius-md); padding: 13px 20px;
+    font-size: .85rem; font-weight: 600; z-index: 900;
+    box-shadow: var(--shadow-lg); max-width: 320px;
+    display: flex; align-items: center; gap: 10px;
+    transform: translateY(20px); opacity: 0;
+    transition: all .28s ease;
+  }
+  .toast.show { transform: none; opacity: 1; }
+  .toast.success { background: var(--clr-success); }
+  .toast.error { background: var(--clr-danger); }
+
+  /* ── Beneficiary Chips ── */
+  .benef-list { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .benef-chip {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; padding: 8px 10px; border-radius: var(--radius-md);
+    border: 1.5px solid var(--clr-border); background: var(--clr-surface);
+    transition: border-color .14s, background .14s; min-width: 70px;
+  }
+  .benef-chip:hover { border-color: var(--clr-accent); background: var(--clr-accent-lt); }
+  .benef-chip.selected { border-color: var(--clr-accent); background: var(--clr-accent-lt); }
+  .benef-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: .83rem; color: #fff;
+  }
+  .benef-name { font-size: .72rem; font-weight: 600; color: var(--clr-label); text-align: center; }
+
+  /* ── Alerts ── */
+  .alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px; border-radius: 8px; font-size: .82rem;
+    margin-bottom: 16px;
+  }
+  .alert.info { background: var(--clr-accent-lt); color: var(--clr-accent); border: 1px solid #BFDBFE; }
+  .alert.warn { background: #FEF3C7; color: var(--clr-warn); border: 1px solid #FDE68A; }
+  .alert.success { background: var(--clr-success-lt); color: var(--clr-success); border: 1px solid #A7F3D0; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .sidebar { width: 60px; min-width: 60px; }
+    .sidebar-item span, .sidebar-section, .sidebar-badge, .nav-user { display: none; }
+    .sidebar-item { justify-content: center; padding: 12px; border-left-color: transparent; }
+    .sidebar-item.active { border-left-color: transparent; background: var(--clr-accent-lt); }
+    .main-content { padding: 20px 16px; }
+  }
+  @media (max-width: 640px) {
+    .accounts-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    .modal { padding: 28px 20px 22px; }
+    .quick-actions { gap: 8px; }
+    .qa-btn { min-width: 72px; padding: 11px 10px; }
+  }
+
+  /* ── Transfer Steps Visibility ── */
+  #transferStep1, #transferStep2, #transferStep3 { display: none; }
+  #transferStep1.visible, #transferStep2.visible, #transferStep3.visible { display: block; }
+
+  /* ── Utility ── */
+  .text-center { text-align: center; }
+  .text-muted { color: var(--clr-muted); }
+  .fw-700 { font-weight: 700; }
+  .mt-4 { margin-top: 4px; } .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; }
+  .mb-0 { margin-bottom: 0; }
+  .gap-8 { gap: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════ TOP NAV ══════════════════════════════════ -->
+<nav class="topnav">
+  <div class="nav-brand">
+    <div class="logo-icon">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <rect x="2" y="2" width="8" height="8" rx="2" fill="#1A56DB"/>
+        <rect x="12" y="2" width="8" height="8" rx="2" fill="#1A56DB" opacity=".6"/>
+        <rect x="2" y="12" width="8" height="8" rx="2" fill="#1A56DB" opacity=".6"/>
+        <rect x="12" y="12" width="8" height="8" rx="2" fill="#1A56DB"/>
+      </svg>
+    </div>
+    PayStack Cloud
+  </div>
+  <div class="nav-links">
+    <a href="#" class="active">Dashboard</a>
+    <a href="#">Accounts</a>
+    <a href="#">Payments</a>
+    <a href="#">History</a>
+    <a href="#">Support</a>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user">Oluwaseun A.</span>
+    <div class="nav-avatar">OA</div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════ APP BODY ══════════════════════════════════ -->
+<div class="app-body">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Main</div>
+    <div class="sidebar-item active" onclick="showSection('dashboard')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Dashboard</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('transfer')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      <span>Transfer Funds</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('history')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Transaction History</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('beneficiaries')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Beneficiaries</span>
+    </div>
+    <div class="sidebar-section">Services</div>
+    <div class="sidebar-item" onclick="showSection('billpay')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <span>Bill Payments</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('airtime')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg>
+      <span>Airtime &amp; Data</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('statements')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>Statements</span>
+    </div>
+    <div class="sidebar-section">Settings</div>
+    <div class="sidebar-item" onclick="showSection('settings')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      <span>Settings</span>
+    </div>
+    <div class="sidebar-item" onclick="showSection('security')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>Security</span>
+    </div>
+    <div class="sidebar-item" style="color:var(--clr-danger)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <span>Logout</span>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="main-content">
+
+    <!-- ════════════════ DASHBOARD ════════════════ -->
+    <section id="sec-dashboard">
+      <div class="page-title">Good morning, Oluwaseun 👋</div>
+      <div class="page-sub">Thursday, 31 July 2026 · Here is your financial overview</div>
+
+      <!-- Account Cards -->
+      <div class="accounts-grid" id="accountCards">
+        <!-- dynamically rendered from backend -->
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="statsRow">
+        <!-- dynamically updated -->
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="font-size:.8rem;font-weight:700;color:var(--clr-muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px;">Quick Actions</div>
+      <div class="quick-actions">
+        <button class="qa-btn" onclick="showSection('transfer')">
+          <div class="qa-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></div>
+          <span class="qa-label">Transfer</span>
+        </button>
+        <button class="qa-btn">
+          <div class="qa-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+          <span class="qa-label">Receive</span>
+        </button>
+        <button class="qa-btn">
+          <div class="qa-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+          <span class="qa-label">Pay Bill</span>
+        </button>
+        <button class="qa-btn">
+          <div class="qa-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg></div>
+          <span class="qa-label">Airtime</span>
+        </button>
+        <button class="qa-btn">
+          <div class="qa-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+          <span class="qa-label">FX / Rates</span>
+        </button>
+        <button class="qa-btn">
+          <div class="qa-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <span class="qa-label">Statement</span>
+        </button>
+        <button class="qa-btn">
+          <div class="qa-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <span class="qa-label">Invest</span>
+        </button>
+        <button class="qa-btn">
+          <div class="qa-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <span class="qa-label">Loans</span>
+        </button>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="panel" style="margin-top:28px;">
+        <div class="panel-tabs">
+          <button class="tab-btn active" onclick="switchTab(this,'txn-recent')">Recent Transactions</button>
+          <button class="tab-btn" onclick="switchTab(this,'txn-pending')">Pending (2)</button>
+          <button class="tab-btn" onclick="switchTab(this,'txn-all')">All Transactions</button>
+        </div>
+        <div id="txn-recent" class="tab-content active">
+          <table class="txn-table">
+            <thead><tr>
+              <th>Recipient / Sender</th>
+              <th>Account</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr></thead>
+            <tbody id="recentTxnBody"></tbody>
+          </table>
+        </div>
+        <div id="txn-pending" class="tab-content">
+          <div class="panel-body">
+            <div class="alert warn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              2 transactions are awaiting confirmation. Please review and action them below.
+            </div>
+            <table class="txn-table">
+              <thead><tr><th>Recipient</th><th>Amount</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><div class="txn-name-cell"><div class="txn-avatar" style="background:#FEF3C7;color:#D97706;">JA</div>James Adewale — GTBank</div></td>
+                  <td class="txn-amount debit">-₦50,000,000.00</td>
+                  <td>31 Jul 2026</td>
+                  <td><span class="txn-status pending">● Pending</span></td>
+                  <td><button class="btn btn-sm btn-outline">Approve</button></td>
+                </tr>
+                <tr>
+                  <td><div class="txn-name-cell"><div class="txn-avatar" style="background:#FEF3C7;color:#D97706;">TI</div>TechInvest Ltd — UBA</div></td>
+                  <td class="txn-amount debit">-₦120,000,000.00</td>
+                  <td>30 Jul 2026</td>
+                  <td><span class="txn-status pending">● Pending</span></td>
+                  <td><button class="btn btn-sm btn-outline">Approve</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div id="txn-all" class="tab-content">
+          <div class="panel-body text-center text-muted" style="padding:40px 0">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.35"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Full transaction history loaded on demand. Use the date filter to search.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ TRANSFER SECTION ════════════════ -->
+    <section id="sec-transfer" style="display:none;">
+      <div class="page-title">Fund Transfer</div>
+      <div class="page-sub">Send money securely to any bank account in Nigeria</div>
+
+      <div class="panel">
+        <div class="panel-tabs">
+          <button class="tab-btn active" onclick="switchTab(this,'tf-local')">Local Transfer</button>
+          <button class="tab-btn" onclick="switchTab(this,'tf-inter')">Inter-bank</button>
+          <button class="tab-btn" onclick="switchTab(this,'tf-bulk')">Bulk Transfer</button>
+          <button class="tab-btn" onclick="switchTab(this,'tf-intl')">International</button>
+          <button class="tab-btn" onclick="switchTab(this,'tf-scheduled')">Scheduled</button>
+        </div>
+
+        <!-- LOCAL TRANSFER -->
+        <div id="tf-local" class="tab-content active">
+          <div class="panel-body">
+            <!-- Step Indicator -->
+            <div class="step-indicator" id="stepIndicator">
+              <div class="step active" id="stepDot1">
+                <div class="step-circle" id="stepCircle1">1</div>
+                <span>Details</span>
+              </div>
+              <div class="step-line"></div>
+              <div class="step" id="stepDot2">
+                <div class="step-circle" id="stepCircle2">2</div>
+                <span>Review</span>
+              </div>
+              <div class="step-line"></div>
+              <div class="step" id="stepDot3">
+                <div class="step-circle" id="stepCircle3">3</div>
+                <span>Authorize</span>
+              </div>
+            </div>
+
+            <!-- STEP 1: Transfer Details -->
+            <div id="transferStep1" class="visible transfer-form">
+              <div class="alert info">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Transfers above ₦1,000,000 require additional OTP verification.
+              </div>
+
+              <!-- Saved Beneficiaries -->
+              <div class="form-group">
+                <label>Saved Beneficiaries</label>
+                <div class="benef-list" id="benefList"></div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Source Account <span class="req">*</span></label>
+                  <select class="form-control" id="sourceAccount">
+                    <option value="">-- Select Source Account --</option>
+                    <!-- populated dynamically -->
+                  </select>
+                  <div class="form-error" id="errSource">Please select a source account.</div>
+                </div>
+                <div class="form-group">
+                  <label>Transfer Type <span class="req">*</span></label>
+                  <select class="form-control" id="transferType">
+                    <option value="same">Same Bank (PayStack Cloud)</option>
+                    <option value="other">Other Banks (NIP/NIBSS)</option>
+                    <option value="rtgs">RTGS (High-value)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Recipient Bank <span class="req">*</span></label>
+                  <select class="form-control" id="recipientBank">
+                    <option value="">-- Select Bank --</option>
+                    <!-- Bank list with codes will be populated by JS -->
+                  </select>
+                  <div class="form-error" id="errBank">Please select recipient bank.</div>
+                </div>
+                <div class="form-group">
+                  <label>Account Number <span class="req">*</span></label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                    <input type="text" class="form-control" id="recipientAcct" placeholder="10-digit account number" maxlength="10" oninput="verifyAccount(this)">
+                  </div>
+                  <div class="form-error" id="errAcct">Enter a valid 10-digit account number.</div>
+                  <div class="form-verified" id="verifiedName">✓ Account verified</div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Account Name</label>
+                <input type="text" class="form-control" id="recipientName" placeholder="Auto-populated after verification" readonly>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Amount (₦) <span class="req">*</span></label>
+                  <div class="input-icon-wrap">
+                    <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <input type="number" class="form-control" id="amount" placeholder="0.00" min="1" oninput="updateAmountPreview()">
+                  </div>
+                  <div class="form-error" id="errAmount">Please enter a valid amount.</div>
+                </div>
+                <div class="form-group">
+                  <label>Transfer Charge</label>
+                  <input type="text" class="form-control" id="txnFee" value="₦50.00 (Standard)" readonly style="background:var(--clr-surface2)">
+                </div>
+              </div>
+
+              <div id="amountPreviewBox" class="amount-preview" style="display:none;">
+                <div>
+                  <div class="ap-label">Transfer Amount</div>
+                  <div style="font-size:.74rem;color:var(--clr-accent);opacity:.7">incl. ₦50 fee</div>
+                </div>
+                <div class="ap-amount" id="amountPreviewVal">₦0.00</div>
+              </div>
+
+              <div class="form-group">
+                <label>Narration / Description</label>
+                <input type="text" class="form-control" id="narration" placeholder="e.g. Invoice payment, Rent, School fees...">
+                <div class="form-hint">Max 50 characters — appears on recipient's statement</div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Transfer Date</label>
+                  <input type="date" class="form-control" id="transferDate" value="2026-07-31">
+                </div>
+                <div class="form-group">
+                  <label>Priority</label>
+                  <select class="form-control" id="priority">
+                    <option value="normal">Normal (Same day)</option>
+                    <option value="express">Express (Instant)</option>
+                    <option value="scheduled">Scheduled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="saveBenef" style="margin-right:6px;">
+                  Save as beneficiary for future transfers
+                </label>
+              </div>
+
+              <div class="btn-group">
+                <button class="btn btn-primary btn-lg" onclick="goToStep2()">
+                  Continue to Review
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+                <button class="btn btn-ghost" onclick="resetTransfer()">Clear Form</button>
+              </div>
+            </div>
+
+            <!-- STEP 2: Review -->
+            <div id="transferStep2" class="transfer-form">
+              <div class="alert success" style="margin-bottom:20px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Please review your transfer details before confirming.
+              </div>
+              <div class="review-box" id="reviewBox"></div>
+              <div class="alert warn" id="largeAmtWarning" style="display:none;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Large transfer detected. An OTP has been sent to your registered phone number ending in **87.
+              </div>
+              <div class="btn-group mt-16">
+                <button class="btn btn-primary btn-lg" onclick="goToStep3()">
+                  Confirm &amp; Authorize
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </button>
+                <button class="btn btn-ghost" onclick="goToStep1()">← Back to Edit</button>
+              </div>
+            </div>
+
+            <!-- STEP 3: PIN Authorization -->
+            <div id="transferStep3" class="transfer-form">
+              <div style="max-width:320px;margin:0 auto;text-align:center;">
+                <div style="font-size:1rem;font-weight:700;margin-bottom:4px;">Enter Transaction PIN</div>
+                <div class="text-muted" style="font-size:.83rem;margin-bottom:4px;">Authorize transfer of <strong id="pinAmountLabel"></strong></div>
+                <div class="text-muted" style="font-size:.78rem;">to <strong id="pinRecipientLabel"></strong></div>
+
+                <div class="pin-dots">
+                  <div class="pin-dot" id="pd1"></div>
+                  <div class="pin-dot" id="pd2"></div>
+                  <div class="pin-dot" id="pd3"></div>
+                  <div class="pin-dot" id="pd4"></div>
+                </div>
+                <div class="pin-label" id="pinHint">Enter your 4-digit transaction PIN</div>
+
+                <div class="pin-grid" id="pinGrid">
+                  <button class="pin-key" onclick="pinPress('1')">1</button>
+                  <button class="pin-key" onclick="pinPress('2')">2</button>
+                  <button class="pin-key" onclick="pinPress('3')">3</button>
+                  <button class="pin-key" onclick="pinPress('4')">4</button>
+                  <button class="pin-key" onclick="pinPress('5')">5</button>
+                  <button class="pin-key" onclick="pinPress('6')">6</button>
+                  <button class="pin-key" onclick="pinPress('7')">7</button>
+                  <button class="pin-key" onclick="pinPress('8')">8</button>
+                  <button class="pin-key" onclick="pinPress('9')">9</button>
+                  <button class="pin-key wide" onclick="pinClear()">Clear</button>
+                  <button class="pin-key" onclick="pinPress('0')">0</button>
+                  <button class="pin-key del" onclick="pinDelete()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+                  </button>
+                </div>
+
+                <div class="btn-group mt-24" style="justify-content:center;">
+                  <button class="btn btn-ghost btn-sm" onclick="goToStep2()">← Back</button>
+                  <button class="btn btn-outline btn-sm">Resend OTP</button>
+                </div>
+                <div style="font-size:.74rem;color:var(--clr-muted);margin-top:12px;">
+                  🔒 256-bit SSL encrypted · Your PIN is never stored
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- INTER-BANK -->
+        <div id="tf-inter" class="tab-content">
+          <div class="panel-body">
+            <div class="alert info"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Inter-bank transfers are processed via the Nigeria Inter-Bank Settlement System (NIBSS). Settlement within 30 minutes.</div>
+            <div class="transfer-form">
+              <div class="form-row">
+                <div class="form-group"><label>Source Account</label>
+                  <select class="form-control"><option>Investment Account</option><option>Current Account</option><option>Savings Account</option></select></div>
+                <div class="form-group"><label>Recipient Bank</label>
+                  <select class="form-control"><option value="">-- Select Bank --</option><option>Access Bank</option><option>GTBank</option><option>Zenith Bank</option><option>UBA</option><option>First Bank</option><option>Fidelity Bank</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Account Number</label><input class="form-control" type="text" maxlength="10" placeholder="10-digit NUBAN"></div>
+                <div class="form-group"><label>Account Name</label><input class="form-control" type="text" placeholder="Auto-populated" readonly></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Amount (₦)</label><input class="form-control" type="number" placeholder="0.00" min="1"></div>
+                <div class="form-group"><label>Narration</label><input class="form-control" type="text" placeholder="Purpose of transfer"></div>
+              </div>
+              <button class="btn btn-primary" onclick="showSection('transfer')">Proceed</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BULK TRANSFER -->
+        <div id="tf-bulk" class="tab-content">
+          <div class="panel-body">
+            <div class="alert info"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+              Upload a CSV file with recipient details for bulk processing. Maximum 500 records per batch.</div>
+            <div class="form-group"><label>Source Account</label>
+              <select class="form-control"><option>Investment Account</option><option>Current Account</option><option>Savings Account</option></select></div>
+            <div class="form-group"><label>Upload Recipients File (CSV)</label>
+              <input type="file" class="form-control" accept=".csv,.xlsx"></div>
+            <div class="form-group"><label>Narration (applies to all)</label>
+              <input class="form-control" type="text" placeholder="Batch payment narration"></div>
+            <div class="btn-group">
+              <button class="btn btn-primary">Upload &amp; Preview</button>
+              <a href="#" class="btn btn-outline">Download Template</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- INTERNATIONAL -->
+        <div id="tf-intl" class="tab-content">
+          <div class="panel-body">
+            <div class="alert warn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+              International transfers require CBN compliance documentation. Processing takes 2–5 business days.</div>
+            <div class="transfer-form">
+              <div class="form-row">
+                <div class="form-group"><label>Source Account</label>
+                  <select class="form-control"><option>Investment Account</option><option>Current Account</option><option>Savings Account</option></select></div>
+                <div class="form-group"><label>Recipient Country</label>
+                  <select class="form-control"><option>United States</option><option>United Kingdom</option><option>Canada</option><option>Germany</option><option>China</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Currency</label>
+                  <select class="form-control"><option>USD</option><option>GBP</option><option>EUR</option><option>CAD</option><option>CNY</option></select></div>
+                <div class="form-group"><label>Amount</label><input class="form-control" type="number" placeholder="0.00"></div>
+              </div>
+              <div class="form-group"><label>SWIFT / BIC Code</label><input class="form-control" type="text" placeholder="e.g. BOFAUS3N"></div>
+              <div class="form-group"><label>IBAN / Account Number</label><input class="form-control" type="text" placeholder="Recipient IBAN"></div>
+              <div class="form-group"><label>Bank Name</label><input class="form-control" type="text" placeholder="Recipient bank name"></div>
+              <button class="btn btn-primary">Continue</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCHEDULED -->
+        <div id="tf-scheduled" class="tab-content">
+          <div class="panel-body">
+            <div class="alert info"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Set up recurring or one-time scheduled transfers. You can cancel anytime before execution.</div>
+            <div class="transfer-form">
+              <div class="form-row">
+                <div class="form-group"><label>Source Account</label>
+                  <select class="form-control"><option>Investment Account</option><option>Current Account</option><option>Savings Account</option></select></div>
+                <div class="form-group"><label>Frequency</label>
+                  <select class="form-control"><option>One-Time</option><option>Daily</option><option>Weekly</option><option>Monthly</option><option>Quarterly</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Start Date</label><input type="date" class="form-control" value="2026-08-01"></div>
+                <div class="form-group"><label>End Date (optional)</label><input type="date" class="form-control"></div>
+              </div>
+              <div class="form-group"><label>Amount (₦)</label><input class="form-control" type="number" placeholder="0.00"></div>
+              <div class="form-group"><label>Recipient Account Number</label><input class="form-control" type="text" maxlength="10" placeholder="10-digit NUBAN"></div>
+              <button class="btn btn-primary">Schedule Transfer</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ════════════════ HISTORY SECTION ════════════════ -->
+    <section id="sec-history" style="display:none;">
+      <div class="page-title">Transaction History</div>
+      <div class="page-sub">Full audit trail of all your account transactions</div>
+      <div class="panel">
+        <div class="panel-body">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+            <select class="form-control" style="max-width:180px;"><option>All Accounts</option><option>Investment Account</option><option>Current Account</option><option>Savings Account</option></select>
+            <select class="form-control" style="max-width:150px;"><option>All Types</option><option>Debit</option><option>Credit</option></select>
+            <input type="date" class="form-control" value="2026-07-01" style="max-width:150px;">
+            <input type="date" class="form-control" value="2026-07-31" style="max-width:150px;">
+            <button class="btn btn-primary btn-sm">Filter</button>
+            <button class="btn btn-outline btn-sm">Export CSV</button>
+          </div>
+          <table class="txn-table">
+            <thead><tr><th>Recipient / Sender</th><th>Account</th><th>Ref No.</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="historyTxnBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ BENEFICIARIES SECTION ════════════════ -->
+    <section id="sec-beneficiaries" style="display:none;">
+      <div class="page-title">Saved Beneficiaries</div>
+      <div class="page-sub">Manage frequently used transfer recipients</div>
+      <div style="display:flex;gap:10px;margin-bottom:20px;">
+        <input class="form-control" type="text" placeholder="Search beneficiaries…" style="max-width:280px;">
+        <button class="btn btn-primary" onclick="showSection('transfer')">+ Add Beneficiary</button>
+      </div>
+      <div class="accounts-grid" id="benefCardsGrid"></div>
+    </section>
+
+    <!-- ════════════════ BILL PAYMENT SECTION ════════════════ -->
+    <section id="sec-billpay" style="display:none;">
+      <div class="page-title">Bill Payments</div>
+      <div class="page-sub">Pay utilities, subscriptions &amp; government services</div>
+      <div class="quick-actions">
+        <div class="qa-btn"><div class="qa-icon orange"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><span class="qa-label">Electricity</span></div>
+        <div class="qa-btn"><div class="qa-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/></svg></div><span class="qa-label">Cable TV</span></div>
+        <div class="qa-btn"><div class="qa-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11H3z"/></svg></div><span class="qa-label">Water</span></div>
+        <div class="qa-btn"><div class="qa-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg></div><span class="qa-label">Internet</span></div>
+        <div class="qa-btn"><div class="qa-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div><span class="qa-label">Tax</span></div>
+      </div>
+      <div class="panel" style="margin-top:20px;"><div class="panel-body text-center text-muted" style="padding:40px 0">Select a biller category above to continue.</div></div>
+    </section>
+
+    <!-- ════════════════ AIRTIME SECTION ════════════════ -->
+    <section id="sec-airtime" style="display:none;">
+      <div class="page-title">Airtime &amp; Data</div>
+      <div class="page-sub">Buy airtime and data bundles for any network</div>
+      <div class="panel"><div class="panel-body" style="max-width:420px;">
+        <div class="form-group"><label>Network</label>
+          <select class="form-control"><option>MTN Nigeria</option><option>Airtel Nigeria</option><option>Glo Mobile</option><option>9mobile</option></select></div>
+        <div class="form-group"><label>Phone Number</label>
+          <input class="form-control" type="tel" placeholder="08XXXXXXXXX" maxlength="11"></div>
+        <div class="form-group"><label>Type</label>
+          <select class="form-control"><option>Airtime</option><option>Data Bundle</option></select></div>
+        <div class="form-group"><label>Amount / Bundle</label>
+          <select class="form-control"><option>₦100</option><option>₦200</option><option>₦500</option><option>₦1,000</option><option>₦2,000</option><option>₦5,000</option></select></div>
+        <div class="form-group"><label>Debit Account</label>
+          <select class="form-control"><option>Current Account</option><option>Investment Account</option><option>Savings Account</option></select></div>
+        <button class="btn btn-primary btn-block">Buy Now</button>
+      </div></div>
+    </section>
+
+    <!-- ════════════════ STATEMENTS SECTION ════════════════ -->
+    <section id="sec-statements" style="display:none;">
+      <div class="page-title">Account Statements</div>
+      <div class="page-sub">Generate and download official account statements</div>
+      <div class="panel"><div class="panel-body" style="max-width:480px;">
+        <div class="form-group"><label>Account</label>
+          <select class="form-control"><option>All Accounts</option><option>Investment Account</option><option>Current Account</option><option>Savings Account</option></select></div>
+        <div class="form-row">
+          <div class="form-group"><label>From Date</label><input type="date" class="form-control" value="2026-07-01"></div>
+          <div class="form-group"><label>To Date</label><input type="date" class="form-control" value="2026-07-31"></div>
+        </div>
+        <div class="form-group"><label>Format</label>
+          <select class="form-control"><option>PDF</option><option>CSV / Excel</option><option>Print Preview</option></select></div>
+        <div class="btn-group">
+          <button class="btn btn-primary">Generate Statement</button>
+          <button class="btn btn-outline">Email to Me</button>
+        </div>
+      </div></div>
+    </section>
+
+    <!-- ════════════════ SETTINGS / SECURITY (stub) ════════════════ -->
+    <section id="sec-settings" style="display:none;">
+      <div class="page-title">Settings</div>
+      <div class="page-sub">Manage your account preferences and notifications</div>
+      <div class="panel"><div class="panel-body text-muted text-center" style="padding:50px 0;">Settings panel — coming soon</div></div>
+    </section>
+    <section id="sec-security" style="display:none;">
+      <div class="page-title">Security</div>
+      <div class="page-sub">Manage your PIN, passwords and two-factor authentication</div>
+      <div class="panel"><div class="panel-body text-muted text-center" style="padding:50px 0;">Security panel — coming soon</div></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════ SUCCESS MODAL ══════════════════════════════════ -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('successModal')">✕</button>
+    <div class="success-anim">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>
+    </div>
+    <div class="success-title">Transfer Successful!</div>
+    <div class="success-sub" id="successSubText">Your funds have been transferred successfully. The recipient's account will be credited shortly.</div>
+    <div class="ref-badge">
+      <div class="rl">Transaction Reference</div>
+      <div class="rv" id="txnRefDisplay">PSC-2026-0000000</div>
+    </div>
+    <div class="review-box" id="successSummary" style="margin-bottom:20px;"></div>
+    <div class="btn-group" style="justify-content:center;gap:12px;">
+      <button class="btn btn-success btn-lg" onclick="printReceipt()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print Receipt
+      </button>
+      <button class="btn btn-outline" onclick="shareReceipt()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+      </button>
+      <button class="btn btn-ghost" onclick="closeModal('successModal'); resetTransfer();">New Transfer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ RECEIPT (PRINT) ══════════════════════════════════ -->
+<div id="receiptArea">
+  <div class="receipt-print" id="receiptContent"></div>
+</div>
+
+<!-- ══════════════════════════════════ TOAST ══════════════════════════════════ -->
+<div class="toast" id="toast">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg">Done</span>
+</div>
+
+<!-- ══════════════════════════════════ JAVASCRIPT ══════════════════════════════════ -->
+<script>
+/* ── Bank Code Mapping ── */
+const bankList = [
+  { name: 'PayStack Cloud', code: '999' },
+  { name: 'Access Bank', code: '044' },
+  { name: 'First Bank', code: '011' },
+  { name: 'GTBank (Guaranty Trust)', code: '058' },
+  { name: 'Zenith Bank', code: '057' },
+  { name: 'UBA (United Bank for Africa)', code: '033' },
+  { name: 'Fidelity Bank', code: '070' },
+  { name: 'Union Bank', code: '032' },
+  { name: 'Stanbic IBTC', code: '221' },
+  { name: 'FCMB', code: '214' },
+  { name: 'Sterling Bank', code: '232' },
+  { name: 'Keystone Bank', code: '082' },
+  { name: 'Polaris Bank', code: '076' },
+  { name: 'Wema Bank / ALAT', code: '035' },
+  { name: 'Ecobank Nigeria', code: '050' },
+  { name: 'Opay', code: '999' }, // placeholder
+  { name: 'Kuda Bank', code: '502' },
+  { name: 'PalmPay', code: '999' },
+  { name: 'Moniepoint', code: '999' }
+];
+
+/* ── Populate bank dropdown ── */
+const bankSelect = document.getElementById('recipientBank');
+bankList.forEach(b => {
+  const opt = document.createElement('option');
+  opt.value = b.code;
+  opt.textContent = b.name;
+  bankSelect.appendChild(opt);
+});
+
+/* ── State ── */
+let currentTransferData = {};
+let pinValue = '';
+let accounts = {};
+let transactions = [];
+let beneficiaries = [];
+
+/* ── API Base ── (relative, same origin) */
+const API_BASE = '';
+
+/* ── Load initial data ── */
+async function loadDashboard() {
+  try {
+    const accRes = await fetch(`${API_BASE}/api/accounts`);
+    accounts = await accRes.json();
+    renderAccountCards();
+    updateStats();
+
+    const txnRes = await fetch(`${API_BASE}/api/transactions`);
+    transactions = await txnRes.json();
+    renderTxnTable();
+
+    const benefRes = await fetch(`${API_BASE}/api/beneficiaries`);
+    beneficiaries = await benefRes.json();
+    renderBenefChips();
+    renderBenefCards();
+  } catch (err) {
+    console.error('Failed to load data:', err);
+    showToast('Could not load dashboard data.', 'error');
+  }
+}
+
+/* ── Render Account Cards ── */
+function renderAccountCards() {
+  const container = document.getElementById('accountCards');
+  const map = {
+    inv: { cls: 'inv', label: 'Investment Account' },
+    cur: { cls: 'cur', label: 'Current Account' },
+    sav: { cls: 'sav', label: 'Savings Account' }
+  };
+  container.innerHTML = Object.keys(accounts).map(key => {
+    const acc = accounts[key];
+    const info = map[key];
+    return `
+      <div class="account-card ${info.cls}" onclick="openTransferWithAccount('${info.label}','${acc.acct}')">
+        <div class="card-pattern"></div>
+        <div class="card-pattern2"></div>
+        <div class="card-type">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          ${info.label}
+        </div>
+        <div class="card-balance">₦${acc.balance.toLocaleString('en-NG', {minimumFractionDigits:2})}</div>
+        <div class="card-label">Available Balance</div>
+        <div class="card-acct-no">Acct No: ${acc.acct}</div>
+        <div class="card-actions">
+          <button class="card-btn" onclick="event.stopPropagation(); openTransferWithAccount('${info.label}','${acc.acct}')">Transfer</button>
+          <button class="card-btn" onclick="event.stopPropagation();">Top Up</button>
+          <button class="card-btn" onclick="event.stopPropagation();">Details</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Populate source account select
+  const srcSelect = document.getElementById('sourceAccount');
+  srcSelect.innerHTML = '<option value="">-- Select Source Account --</option>';
+  Object.keys(accounts).forEach(key => {
+    const acc = accounts[key];
+    const label = `${acc.name} (₦${acc.balance.toLocaleString('en-NG', {minimumFractionDigits:2})})`;
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = label;
+    srcSelect.appendChild(opt);
+  });
+}
+
+/* ── Update Stats ── */
+function updateStats() {
+  const total = Object.values(accounts).reduce((sum, a) => sum + a.balance, 0);
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card">
+      <div class="st-label">Total Portfolio</div>
+      <div class="st-val">₦${total.toLocaleString('en-NG', {minimumFractionDigits:2})}</div>
+      <div class="st-change">↑ +4.2% this month</div>
+    </div>
+    <div class="stat-card">
+      <div class="st-label">Transfers This Month</div>
+      <div class="st-val">24</div>
+      <div class="st-change">↑ +6 from last month</div>
+    </div>
+    <div class="stat-card">
+      <div class="st-label">Pending Transactions</div>
+      <div class="st-val">2</div>
+      <div class="st-change neg">Action required</div>
+    </div>
+    <div class="stat-card">
+      <div class="st-label">Investment Yield</div>
+      <div class="st-val">12.4% p.a.</div>
+      <div class="st-change">↑ Above market avg</div>
+    </div>
+  `;
+}
+
+/* ── Render Transactions Table ── */
+function renderTxnTable() {
+  const body = document.getElementById('recentTxnBody');
+  body.innerHTML = transactions.slice(0,8).map(t => `
+    <tr>
+      <td><div class="txn-name-cell">
+        <div class="txn-avatar" style="background:${t.type==='credit'?'#ECFDF5':'#EBF0FD'};color:${t.type==='credit'?'#0D9488':'#1A56DB'}">
+          ${t.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+        </div>
+        <div><div style="font-weight:600">${t.name}</div><div style="font-size:.74rem;color:var(--clr-muted)">${t.bank}</div></div>
+      </div></td>
+      <td style="font-size:.8rem;color:var(--clr-muted)">${t.from}</td>
+      <td style="font-size:.8rem">${t.date}</td>
+      <td class="txn-amount ${t.type}">${t.type==='debit'?'-':'+'}${fmtNaira(Math.abs(t.amount))}</td>
+      <td><span class="txn-status ${t.status}">● ${t.status.charAt(0).toUpperCase()+t.status.slice(1)}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="viewTxn('${t.ref}')">View</button></td>
+    </tr>
+  `).join('');
+
+  // History table
+  const hBody = document.getElementById('historyTxnBody');
+  if (hBody) hBody.innerHTML = transactions.map(t => `
+    <tr>
+      <td><div class="txn-name-cell">
+        <div class="txn-avatar" style="background:${t.type==='credit'?'#ECFDF5':'#EBF0FD'};color:${t.type==='credit'?'#0D9488':'#1A56DB'}">
+          ${t.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+        </div>
+        <div><div style="font-weight:600">${t.name}</div><div style="font-size:.74rem;color:var(--clr-muted)">${t.bank}</div></div>
+      </div></td>
+      <td style="font-size:.8rem;color:var(--clr-muted)">${t.from}</td>
+      <td style="font-family:var(--font-num);font-size:.78rem">${t.ref}</td>
+      <td style="font-size:.8rem">${t.date}</td>
+      <td class="txn-amount ${t.type}">${t.type==='debit'?'-':'+'}${fmtNaira(Math.abs(t.amount))}</td>
+      <td><span class="txn-status ${t.status}">● ${t.status.charAt(0).toUpperCase()+t.status.slice(1)}</span></td>
+    </tr>
+  `).join('');
+}
+
+function viewTxn(ref) {
+  const t = transactions.find(x => x.ref === ref);
+  if (t) showToast('Ref: ' + ref, 'success');
+}
+
+/* ── Render Beneficiaries ── */
+function renderBenefChips() {
+  const list = document.getElementById('benefList');
+  if (!beneficiaries.length) {
+    list.innerHTML = '<span class="text-muted" style="font-size:.8rem;">No saved beneficiaries</span>';
+    return;
+  }
+  list.innerHTML = beneficiaries.map(b => `
+    <div class="benef-chip" onclick="fillBeneficiary('${b.acct}','${b.name}','${b.bank}', this)">
+      <div class="benef-avatar" style="background:${b.color || '#7C3AED'}">${b.initials}</div>
+      <span class="benef-name">${b.name.split(' ')[0]}</span>
+    </div>
+  `).join('');
+}
+
+function renderBenefCards() {
+  const grid = document.getElementById('benefCardsGrid');
+  if (!grid) return;
+  if (!beneficiaries.length) {
+    grid.innerHTML = '<div class="text-muted" style="grid-column:1/-1;text-align:center;padding:40px 0;">No saved beneficiaries yet.</div>';
+    return;
+  }
+  grid.innerHTML = beneficiaries.map(b => `
+    <div class="account-card" style="background:${b.color || '#7C3AED'};color:#fff;">
+      <div class="card-pattern"></div>
+      <div class="card-type"><div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:800">${b.initials}</div>${b.name}</div>
+      <div class="card-label" style="margin-top:6px;">${b.bank}</div>
+      <div class="card-acct-no">${b.acct}</div>
+      <div class="card-actions">
+        <button class="card-btn" onclick="openTransferWithAccount('Current Account',''); document.getElementById('recipientAcct').value='${b.acct}'; verifyAccount(document.getElementById('recipientAcct')); showSection('transfer');">Transfer</button>
+        <button class="card-btn">Edit</button>
+        <button class="card-btn" style="border-color:rgba(255,100,100,.5);color:rgba(255,150,150,1);">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function fillBeneficiary(acct, name, bank, chip) {
+  document.querySelectorAll('.benef-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+  document.getElementById('recipientAcct').value = acct;
+  document.getElementById('recipientName').value = name;
+  document.getElementById('verifiedName').textContent = '✓ ' + name + ' verified';
+  document.getElementById('verifiedName').style.display = 'block';
+  // Find bank code
+  const bankSel = document.getElementById('recipientBank');
+  for (const opt of bankSel.options) {
+    if (opt.text.toLowerCase().includes(bank.toLowerCase())) { bankSel.value = opt.value; break; }
+  }
+}
+
+/* ── Account Verification ── */
+async function verifyAccount(inp) {
+  const acct = inp.value.replace(/\D/g, '');
+  inp.value = acct;
+  const verifiedEl = document.getElementById('verifiedName');
+  const nameField = document.getElementById('recipientName');
+  const bankCode = document.getElementById('recipientBank').value;
+
+  if (acct.length === 10 && bankCode) {
+    try {
+      const resp = await fetch(`${API_BASE}/api/verify-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountNumber: acct, bankCode })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        nameField.value = data.data.account_name;
+        verifiedEl.style.display = 'block';
+        verifiedEl.textContent = `✓ ${data.data.account_name} verified`;
+        verifiedEl.style.color = 'var(--clr-success)';
+      } else {
+        verifiedEl.style.display = 'block';
+        verifiedEl.textContent = '✗ ' + data.message;
+        verifiedEl.style.color = 'var(--clr-danger)';
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Verification failed', 'error');
+    }
+  } else {
+    verifiedEl.style.display = 'none';
+    nameField.value = '';
+  }
+}
+
+/* ── Transfer Steps ── */
+function goToStep1() { setStep(1); }
+function goToStep2() {
+  // Validate
+  let valid = true;
+  const src = document.getElementById('sourceAccount').value;
+  const bank = document.getElementById('recipientBank').value;
+  const acct = document.getElementById('recipientAcct').value;
+  const amt = parseFloat(document.getElementById('amount').value);
+
+  if (!src) { showErr('errSource'); valid = false; } else hideErr('errSource');
+  if (!bank) { showErr('errBank'); valid = false; } else hideErr('errBank');
+  if (!acct || acct.length < 10) { showErr('errAcct'); valid = false; } else hideErr('errAcct');
+  if (!amt || amt <= 0) { showErr('errAmount'); valid = false; } else hideErr('errAmount');
+  if (!valid) { showToast('Please fill all required fields.', 'error'); return; }
+
+  const narr = document.getElementById('narration').value || 'Fund Transfer';
+  const recName = document.getElementById('recipientName').value || 'Recipient';
+  const srcAcc = accounts[src];
+
+  currentTransferData = {
+    source: srcAcc.name,
+    sourceKey: src,
+    bank,
+    acct,
+    name: recName,
+    amount: amt,
+    narration: narr,
+    date: document.getElementById('transferDate').value || '2026-07-31',
+    priority: document.getElementById('priority').value,
+    fee: 50
+  };
+
+  const large = amt > 1000000;
+  document.getElementById('largeAmtWarning').style.display = large ? 'flex' : 'none';
+
+  document.getElementById('reviewBox').innerHTML = `
+    <div class="review-row"><span class="rl">Source Account</span><span class="rv">${currentTransferData.source}</span></div>
+    <div class="review-row"><span class="rl">Recipient Bank</span><span class="rv">${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}</span></div>
+    <div class="review-row"><span class="rl">Account Number</span><span class="rv">${currentTransferData.acct}</span></div>
+    <div class="review-row"><span class="rl">Account Name</span><span class="rv">${currentTransferData.name}</span></div>
+    <div class="review-row"><span class="rl">Narration</span><span class="rv">${currentTransferData.narration}</span></div>
+    <div class="review-row"><span class="rl">Transfer Date</span><span class="rv">${currentTransferData.date}</span></div>
+    <div class="review-row"><span class="rl">Priority</span><span class="rv">${currentTransferData.priority.charAt(0).toUpperCase()+currentTransferData.priority.slice(1)}</span></div>
+    <div class="review-row"><span class="rl">Amount</span><span class="rv">${fmtNaira(currentTransferData.amount)}</span></div>
+    <div class="review-row"><span class="rl">Transaction Fee</span><span class="rv">₦50.00</span></div>
+    <div class="review-total"><span>Total Debit</span><span class="rv">${fmtNaira(currentTransferData.amount + 50)}</span></div>
+  `;
+  setStep(2);
+}
+
+function goToStep3() {
+  pinValue = '';
+  updatePinDots();
+  document.getElementById('pinAmountLabel').textContent = fmtNaira(currentTransferData.amount);
+  document.getElementById('pinRecipientLabel').textContent = currentTransferData.name + ' · ' + (bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank);
+  setStep(3);
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('transferStep' + i);
+    el.classList.remove('visible');
+    if (i === n) el.classList.add('visible');
+    const dot = document.getElementById('stepDot' + i);
+    dot.classList.remove('active', 'done');
+    if (i < n) dot.classList.add('done');
+    else if (i === n) dot.classList.add('active');
+    const circle = document.getElementById('stepCircle' + i);
+    if (i < n) circle.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+    else circle.textContent = i;
+  }
+}
+
+/* ── PIN ── */
+function pinPress(digit) {
+  if (pinValue.length >= 4) return;
+  pinValue += digit;
+  updatePinDots();
+  if (pinValue.length === 4) { setTimeout(checkPin, 400); }
+}
+function pinDelete() { pinValue = pinValue.slice(0,-1); updatePinDots(); }
+function pinClear()  { pinValue = ''; updatePinDots(); }
+function updatePinDots() {
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('pd' + i).classList.toggle('filled', i <= pinValue.length);
+  }
+}
+function checkPin() {
+  if (pinValue.length === 4) {
+    document.getElementById('pinHint').textContent = 'Authorizing…';
+    setTimeout(executeTransfer, 800);
+  }
+}
+
+/* ── Execute Transfer ── */
+async function executeTransfer() {
+  const payload = {
+    sourceAccount: currentTransferData.sourceKey,
+    recipientBank: currentTransferData.bank,
+    recipientAcct: currentTransferData.acct,
+    amount: currentTransferData.amount,
+    narration: currentTransferData.narration,
+    saveBenef: document.getElementById('saveBenef').checked
+  };
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await resp.json();
+    if (result.success) {
+      const ref = result.reference;
+      currentTransferData.ref = ref;
+      currentTransferData.timestamp = new Date().toLocaleString('en-NG', {dateStyle:'long',timeStyle:'short'});
+
+      // Refresh data
+      await loadDashboard();
+
+      // Show success modal
+      document.getElementById('txnRefDisplay').textContent = ref;
+      document.getElementById('successSubText').textContent =
+        `₦${currentTransferData.amount.toLocaleString('en-NG', {minimumFractionDigits:2})} has been sent to ${currentTransferData.name} — ${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}.`;
+      document.getElementById('successSummary').innerHTML = `
+        <div class="review-row"><span class="rl">Recipient</span><span class="rv">${currentTransferData.name}</span></div>
+        <div class="review-row"><span class="rl">Bank</span><span class="rv">${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}</span></div>
+        <div class="review-row"><span class="rl">Account No.</span><span class="rv">${currentTransferData.acct}</span></div>
+        <div class="review-row"><span class="rl">Amount Sent</span><span class="rv">${fmtNaira(currentTransferData.amount)}</span></div>
+        <div class="review-row"><span class="rl">Source Account</span><span class="rv">${currentTransferData.source}</span></div>
+        <div class="review-row"><span class="rl">Date &amp; Time</span><span class="rv">${currentTransferData.timestamp}</span></div>
+      `;
+      openModal('successModal');
+      document.getElementById('pinHint').textContent = 'Enter your 4-digit transaction PIN';
+    } else {
+      showToast('Transfer failed: ' + result.error, 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Network error, transfer failed.', 'error');
+  }
+}
+
+/* ── Print Receipt ── */
+function printReceipt() {
+  const d = currentTransferData;
+  const bankName = bankList.find(b => b.code === d.bank)?.name || d.bank;
+  document.getElementById('receiptContent').innerHTML = `
+    <div class="rp-logo">
+      <div class="rp-icon">P</div>
+      PayStack Cloud
+    </div>
+    <div class="rp-header-badge">✓ Transfer Successful</div>
+    <div class="rp-title">Transfer Receipt</div>
+    <div class="rp-date">Issued: ${d.timestamp || new Date().toLocaleString('en-NG')}</div>
+    <div class="rp-divider"></div>
+    <div class="rp-row"><span class="rp-l">Transaction Reference</span><span class="rp-r">${d.ref || 'N/A'}</span></div>
+    <div class="rp-row"><span class="rp-l">Source Account</span><span class="rp-r">${d.source}</span></div>
+    <div class="rp-row"><span class="rp-l">Recipient Name</span><span class="rp-r">${d.name}</span></div>
+    <div class="rp-row"><span class="rp-l">Recipient Bank</span><span class="rp-r">${bankName}</span></div>
+    <div class="rp-row"><span class="rp-l">Account Number</span><span class="rp-r">${d.acct}</span></div>
+    <div class="rp-row"><span class="rp-l">Narration</span><span class="rp-r">${d.narration}</span></div>
+    <div class="rp-row"><span class="rp-l">Transfer Date</span><span class="rp-r">${d.date}</span></div>
+    <div class="rp-row"><span class="rp-l">Amount Transferred</span><span class="rp-r">${fmtNaira(d.amount)}</span></div>
+    <div class="rp-row"><span class="rp-l">Transaction Fee</span><span class="rp-r">₦50.00</span></div>
+    <div class="rp-total"><span>Total Debit</span><span>${fmtNaira(d.amount + 50)}</span></div>
+    <div class="rp-divider"></div>
+    <div class="rp-footer">
+      PayStack Cloud Banking Portal · This is an auto-generated receipt.<br>
+      For queries: support@paystackcloud.ng · 0700-PAYSTACK<br>
+      Reference: ${d.ref}
+    </div>
+  `;
+  document.getElementById('receiptArea').style.display = 'block';
+  window.print();
+  setTimeout(() => { document.getElementById('receiptArea').style.display = 'none'; }, 500);
+}
+
+function shareReceipt() {
+  const text = `PayStack Cloud Transfer\nRef: ${currentTransferData.ref}\nAmount: ${fmtNaira(currentTransferData.amount)}\nTo: ${currentTransferData.name} (${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank})\nDate: ${currentTransferData.timestamp}`;
+  if (navigator.clipboard) { navigator.clipboard.writeText(text); showToast('Receipt details copied to clipboard!', 'success'); }
+  else showToast('Share: ' + currentTransferData.ref, 'success');
+}
+
+/* ── Amount Preview ── */
+function updateAmountPreview() {
+  const amt = parseFloat(document.getElementById('amount').value) || 0;
+  const box = document.getElementById('amountPreviewBox');
+  if (amt > 0) {
+    box.style.display = 'flex';
+    document.getElementById('amountPreviewVal').textContent = fmtNaira(amt + 50);
+    const fee = amt <= 5000 ? 10 : amt <= 50000 ? 25 : 50;
+    document.getElementById('txnFee').value = `₦${fee}.00 (Standard)`;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+/* ── Reset Transfer ── */
+function resetTransfer() {
+  ['sourceAccount','recipientBank','recipientAcct','recipientName','amount','narration'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el.tagName === 'SELECT') el.value = '';
+    else el.value = '';
+  });
+  document.getElementById('amountPreviewBox').style.display = 'none';
+  document.getElementById('verifiedName').style.display = 'none';
+  pinValue = ''; updatePinDots();
+  setStep(1);
+}
+
+/* ── Modal ── */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+/* ── Toast ── */
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.querySelector('#toastMsg').textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ── Errors ── */
+function showErr(id) {
+  const el = document.getElementById(id); if(el) el.style.display='block';
+}
+function hideErr(id) {
+  const el = document.getElementById(id); if(el) el.style.display='none';
+}
+
+/* ── Format Naira ── */
+function fmtNaira(n) {
+  return '₦' + Math.abs(n).toLocaleString('en-NG', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+/* ── Section Navigation ── */
+function showSection(id) {
+  document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
+  document.getElementById('sec-' + id).style.display = 'block';
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  const items = document.querySelectorAll('.sidebar-item');
+  items.forEach(item => {
+    if (item.getAttribute('onclick') && item.getAttribute('onclick').includes("'"+id+"'")) item.classList.add('active');
+  });
+  window.scrollTo(0,0);
+}
+
+/* ── Tab Switcher ── */
+function switchTab(btn, targetId) {
+  const panel = btn.closest('.panel');
+  const tabs = btn.parentElement.querySelectorAll('.tab-btn');
+  tabs.forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const contents = panel.querySelectorAll('.tab-content');
+  contents.forEach(c => c.classList.remove('active'));
+  document.getElementById(targetId).classList.add('active');
+}
+
+/* ── Open Transfer with account preset ── */
+function openTransferWithAccount(name, id) {
+  showSection('transfer');
+  const sel = document.getElementById('sourceAccount');
+  if (name.includes('Investment')) sel.value = 'inv';
+  else if (name.includes('Current')) sel.value = 'cur';
+  else if (name.includes('Savings')) sel.value = 'sav';
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+  setStep(1);
+  // Close modal on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(ov => {
+    ov.addEventListener('click', e => { if(e.target === ov) ov.classList.remove('open'); });
+  });
+});
+</script>
+</body>
+</html>
