@@ -1289,6 +1289,8 @@
 <!-- ══════════════════════════════════ JAVASCRIPT ══════════════════════════════════ -->
 <script>
 /* ── Bank Code Mapping ── */
+// Replace with your actual backend URL after deployment
+const BACKEND_URL = 'https://your-backend-url.onrender.com'; // or Railway URL
 const bankList = [
   { name: 'PayStack Cloud', code: '999' },
   { name: 'Access Bank', code: '044' },
@@ -1333,16 +1335,16 @@ const API_BASE = '';
 /* ── Load initial data ── */
 async function loadDashboard() {
   try {
-    const accRes = await fetch(`${API_BASE}/api/accounts`);
+    const accRes = await fetch(`${BACKEND_URL}/api/accounts`);
     accounts = await accRes.json();
     renderAccountCards();
     updateStats();
 
-    const txnRes = await fetch(`${API_BASE}/api/transactions`);
+    const txnRes = await fetch(`${BACKEND_URL}/api/transactions`);
     transactions = await txnRes.json();
     renderTxnTable();
 
-    const benefRes = await fetch(`${API_BASE}/api/beneficiaries`);
+    const benefRes = await fetch(`${BACKEND_URL}/api/beneficiaries`);
     beneficiaries = await benefRes.json();
     renderBenefChips();
     renderBenefCards();
@@ -1527,7 +1529,7 @@ async function verifyAccount(inp) {
 
   if (acct.length === 10 && bankCode) {
     try {
-      const resp = await fetch(`${API_BASE}/api/verify-account`, {
+      const resp = await fetch(`${BACKEND_URL}/api/verify-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountNumber: acct, bankCode })
@@ -1660,7 +1662,7 @@ async function executeTransfer() {
   };
 
   try {
-    const resp = await fetch(`${API_BASE}/api/transfer`, {
+    const resp = await fetch(`${BACKEND_URL}/api/transfer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
