@@ -1563,7 +1563,9 @@ function goToStep2() {
   const src = document.getElementById('sourceAccount').value;
   const bank = document.getElementById('recipientBank').value;
   const acct = document.getElementById('recipientAcct').value;
-  const amt = parseFloat(document.getElementById('amount').value);
+  const rawAmount = document.getElementById('amount').value;
+  const cleaned = rawAmount.replace(/,/g, '');
+  const amt = parseFloat(cleaned);
 
   if (!src) { showErr('errSource'); valid = false; } else hideErr('errSource');
   if (!bank) { showErr('errBank'); valid = false; } else hideErr('errBank');
