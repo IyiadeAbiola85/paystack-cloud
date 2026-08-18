@@ -7,20 +7,11 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ------------------ CORS Configuration ------------------
-// Allow all origins (for educational/demo purposes).
-// For production, restrict to your frontend domain:
-// const corsOptions = {
-//   origin: 'https://your-frontend-url.netlify.app',
-//   optionsSuccessStatus: 200
-// };
-// app.use(cors(corsOptions));
+// Allow all origins for educational/demo purposes.
 app.use(cors()); // Allows all origins – fine for testing.
 
-// If you need to allow credentials (cookies, etc.), add:
-// app.use(cors({ origin: '*', credentials: true }));
-
 app.use(express.json());
-app.use(express.static('public')); // Only needed if you serve frontend from same origin; you can keep it for local testing.
+app.use(express.static('public')); // Only needed if you serve frontend from same origin.
 
 // ------------------ MOCK DATA (replace with DB later) ------------------
 let accounts = {
@@ -71,16 +62,21 @@ app.post('/api/verify-account', async (req, res) => {
   }
 });
 
-// 2. Initiate transfer (single)
+// 2. Initiate transfer (single) – with improved error handling and amount cleaning
 app.post('/api/transfer', async (req, res) => {
-  const { sourceAccount, recipientBank, recipientAcct, amount, narration, saveBenef } = req.body;
+  const { sourceAccount, recipientBank, recipientAcct, narration, saveBenef } = req.body;
+  // Clean amount: remove commas, parse to float
+  const rawAmount = req.body.amount;
+  const cleanedAmount = typeof rawAmount === 'string' ? rawAmount.replace(/,/g, '') : rawAmount;
+  const amountNum = parseFloat(cleanedAmount);
+
   // Validate inputs
-  if (!sourceAccount || !recipientBank || !recipientAcct || !amount || amount <= 0) {
-    return res.status(400).json({ error: 'Missing or invalid transfer details' });
+  if (!sourceAccount || !recipientBank || !recipientAcct || !amountNum || amountNum <= 0) {
+    return res.status(400).json({ error: 'Missing or invalid transfer details (amount must be > 0)' });
   }
 
   // Convert amount to kobo (Paystack uses smallest currency unit)
-  const amountInKobo = Math.round(amount * 100);
+  const amountInKobo = Math.round(amountNum * 100);
 
   try {
     // 1. Create a transfer recipient
@@ -92,6 +88,7 @@ app.post('/api/transfer', async (req, res) => {
       currency: 'NGN'
     });
     if (!recipientResponse.status) {
+      // If recipient creation fails, return the error message from Paystack
       return res.status(400).json({ error: recipientResponse.message });
     }
     const recipientCode = recipientResponse.data.recipient_code;
@@ -113,11 +110,19 @@ app.post('/api/transfer', async (req, res) => {
         reference: transferResponse.data.reference
       });
     } else {
+      // Transfer initiation failed, return Paystack's message
       return res.status(400).json({ error: transferResponse.message });
     }
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Transfer failed' });
+    console.error('Paystack error:', error);
+    // Extract more detailed error if available
+    let errorMsg = 'Transfer failed';
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMsg = error.response.data.message;
+    } else if (error.message) {
+      errorMsg = error.message;
+    }
+    return res.status(500).json({ error: errorMsg });
   }
 });
 
