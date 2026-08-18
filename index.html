@@ -1544,7 +1544,7 @@ function fillBeneficiary(acct, name, bank, chip) {
   }
 }
 
-/* ── Account Verification ── */
+/* ── Account Verification with improved error handling ── */
 async function verifyAccount(inp) {
   const acct = inp.value.replace(/\D/g, '');
   inp.value = acct;
@@ -1552,33 +1552,64 @@ async function verifyAccount(inp) {
   const nameField = document.getElementById('recipientName');
   const bankCode = document.getElementById('recipientBank')?.value;
 
-  if (acct.length === 10 && bankCode) {
-    try {
-      const resp = await fetch(`${BACKEND_URL}/api/verify-account`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountNumber: acct, bankCode })
-      });
-      const data = await resp.json();
-      if (verifiedEl && nameField) {
-        if (data.success) {
-          nameField.value = data.data.account_name;
-          verifiedEl.style.display = 'block';
-          verifiedEl.textContent = `✓ ${data.data.account_name} verified`;
-          verifiedEl.style.color = 'var(--clr-success)';
-        } else {
-          verifiedEl.style.display = 'block';
-          verifiedEl.textContent = '✗ ' + data.message;
-          verifiedEl.style.color = 'var(--clr-danger)';
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Verification failed', 'error');
+  // Reset verification state
+  if (verifiedEl) {
+    verifiedEl.style.display = 'none';
+    verifiedEl.style.color = 'var(--clr-success)';
+  }
+  if (nameField) nameField.value = '';
+
+  // Validate length and bank selected
+  if (acct.length !== 10) {
+    if (verifiedEl) {
+      verifiedEl.style.display = 'block';
+      verifiedEl.textContent = '✗ Please enter a 10-digit account number.';
+      verifiedEl.style.color = 'var(--clr-danger)';
     }
-  } else {
-    if (verifiedEl) verifiedEl.style.display = 'none';
-    if (nameField) nameField.value = '';
+    return;
+  }
+  if (!bankCode) {
+    if (verifiedEl) {
+      verifiedEl.style.display = 'block';
+      verifiedEl.textContent = '✗ Please select a bank first.';
+      verifiedEl.style.color = 'var(--clr-danger)';
+    }
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${BACKEND_URL}/api/verify-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountNumber: acct, bankCode })
+    });
+    const data = await resp.json();
+    console.log('Verification response:', data); // Debug log
+
+    if (verifiedEl && nameField) {
+      if (data.success && data.data && data.data.account_name) {
+        nameField.value = data.data.account_name;
+        verifiedEl.style.display = 'block';
+        verifiedEl.textContent = `✓ ${data.data.account_name} verified`;
+        verifiedEl.style.color = 'var(--clr-success)';
+        // update fee if needed
+        document.getElementById('txnFee').value = '₦50.00 (Standard)';
+      } else {
+        // Show error message from backend or fallback
+        const errorMsg = data.message || data.error || 'Verification failed. Please check account number and bank.';
+        verifiedEl.style.display = 'block';
+        verifiedEl.textContent = '✗ ' + errorMsg;
+        verifiedEl.style.color = 'var(--clr-danger)';
+      }
+    }
+  } catch (err) {
+    console.error('Verification error:', err);
+    if (verifiedEl) {
+      verifiedEl.style.display = 'block';
+      verifiedEl.textContent = '✗ Network error – could not verify account.';
+      verifiedEl.style.color = 'var(--clr-danger)';
+    }
+    showToast('Verification failed due to network error.', 'error');
   }
 }
 
@@ -1695,7 +1726,7 @@ function checkPin() {
   }
 }
 
-/* ── Execute Transfer ── */
+/* ── Execute Transfer with improved error handling ── */
 async function executeTransfer() {
   const payload = {
     sourceAccount: currentTransferData.sourceKey,
@@ -1713,6 +1744,8 @@ async function executeTransfer() {
       body: JSON.stringify(payload)
     });
     const result = await resp.json();
+    console.log('Transfer response:', result); // Debug log
+
     if (result.success) {
       const ref = result.reference;
       currentTransferData.ref = ref;
@@ -1737,11 +1770,13 @@ async function executeTransfer() {
       const hint = document.getElementById('pinHint');
       if (hint) hint.textContent = 'Enter your 4-digit transaction PIN';
     } else {
-      showToast('Transfer failed: ' + result.error, 'error');
+      // Show detailed error from backend
+      const errorMsg = result.error || 'Transfer failed. Please try again.';
+      showToast('Transfer failed: ' + errorMsg, 'error');
     }
   } catch (err) {
-    console.error(err);
-    showToast('Network error, transfer failed.', 'error');
+    console.error('Transfer error:', err);
+    showToast('Network error – transfer failed.', 'error');
   }
 }
 
