@@ -3,7 +3,7 @@ services:
     name: paystack-cloud
     env: node
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node server.js
     envVars:
       - key: PAYSTACK_SECRET_KEY
       - key: sk_test_dc67a56f51b875dc03867c9fe55e42e5d6ef6b75
