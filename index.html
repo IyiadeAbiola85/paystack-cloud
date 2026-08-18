@@ -19,8 +19,7 @@
 
 <script>
 /* ── Bank Code Mapping ── */
-// Replace with your actual backend URL after deployment
-const BACKEND_URL = 'https://paystack-cloud.onrender.com'; // or Railway URL
+const BACKEND_URL = 'https://paystack-cloud.onrender.com';
 const bankList = [
   { name: 'PayStack Cloud', code: '999' },
   { name: 'Access Bank', code: '044' },
@@ -43,21 +42,27 @@ const bankList = [
   { name: 'Moniepoint', code: '999' }
 ];
 
-/* ── Populate bank dropdown ── */
-const bankSelect = document.getElementById('recipientBank');
-bankList.forEach(b => {
-  const opt = document.createElement('option');
-  opt.value = b.code;
-  opt.textContent = b.name;
-  bankSelect.appendChild(opt);
-});
-
 /* ── State ── */
 let currentTransferData = {};
 let pinValue = '';
 let accounts = {};
 let transactions = [];
 let beneficiaries = [];
+
+/* ── Populate bank dropdown (safe) ── */
+function populateBankDropdown() {
+  const bankSelect = document.getElementById('recipientBank');
+  if (!bankSelect) {
+    console.warn('Bank dropdown element not found.');
+    return;
+  }
+  bankList.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.code;
+    opt.textContent = b.name;
+    bankSelect.appendChild(opt);
+  });
+}
 
 /* ── Load initial data ── */
 async function loadDashboard() {
@@ -560,6 +565,7 @@ function openTransferWithAccount(name, id) {
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', () => {
+  populateBankDropdown();  // <-- Populate bank dropdown safely after DOM ready
   loadDashboard();
   setStep(1);
   // Close modal on overlay click
