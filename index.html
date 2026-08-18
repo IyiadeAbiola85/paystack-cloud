@@ -53,7 +53,7 @@ let beneficiaries = [];
 function populateBankDropdown() {
   const bankSelect = document.getElementById('recipientBank');
   if (!bankSelect) {
-    console.warn('Bank dropdown element not found.');
+    console.warn('Bank dropdown element (#recipientBank) not found.');
     return;
   }
   bankList.forEach(b => {
@@ -62,6 +62,20 @@ function populateBankDropdown() {
     opt.textContent = b.name;
     bankSelect.appendChild(opt);
   });
+}
+
+/* ── Toast (fallback if element missing) ── */
+function ensureToast() {
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.className = 'toast';
+    toast.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span id="toastMsg">Done</span>';
+    document.body.appendChild(toast);
+    console.warn('Toast element was missing – created dynamically.');
+  }
+  return toast;
 }
 
 /* ── Load initial data ── */
@@ -89,6 +103,10 @@ async function loadDashboard() {
 /* ── Render Account Cards ── */
 function renderAccountCards() {
   const container = document.getElementById('accountCards');
+  if (!container) {
+    console.error('Element #accountCards not found – cannot render accounts.');
+    return;
+  }
   const map = {
     inv: { cls: 'inv', label: 'Investment Account' },
     cur: { cls: 'cur', label: 'Current Account' },
@@ -119,21 +137,28 @@ function renderAccountCards() {
 
   // Populate source account select
   const srcSelect = document.getElementById('sourceAccount');
-  srcSelect.innerHTML = '<option value="">-- Select Source Account --</option>';
-  Object.keys(accounts).forEach(key => {
-    const acc = accounts[key];
-    const label = `${acc.name} (₦${acc.balance.toLocaleString('en-NG', {minimumFractionDigits:2})})`;
-    const opt = document.createElement('option');
-    opt.value = key;
-    opt.textContent = label;
-    srcSelect.appendChild(opt);
-  });
+  if (srcSelect) {
+    srcSelect.innerHTML = '<option value="">-- Select Source Account --</option>';
+    Object.keys(accounts).forEach(key => {
+      const acc = accounts[key];
+      const label = `${acc.name} (₦${acc.balance.toLocaleString('en-NG', {minimumFractionDigits:2})})`;
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = label;
+      srcSelect.appendChild(opt);
+    });
+  }
 }
 
 /* ── Update Stats ── */
 function updateStats() {
+  const statsRow = document.getElementById('statsRow');
+  if (!statsRow) {
+    console.warn('Element #statsRow not found – stats will not be rendered.');
+    return;
+  }
   const total = Object.values(accounts).reduce((sum, a) => sum + a.balance, 0);
-  document.getElementById('statsRow').innerHTML = `
+  statsRow.innerHTML = `
     <div class="stat-card">
       <div class="st-label">Total Portfolio</div>
       <div class="st-val">₦${total.toLocaleString('en-NG', {minimumFractionDigits:2})}</div>
@@ -160,6 +185,10 @@ function updateStats() {
 /* ── Render Transactions Table ── */
 function renderTxnTable() {
   const body = document.getElementById('recentTxnBody');
+  if (!body) {
+    console.warn('Element #recentTxnBody not found – transactions not rendered.');
+    return;
+  }
   body.innerHTML = transactions.slice(0,8).map(t => `
     <tr>
       <td><div class="txn-name-cell">
@@ -176,23 +205,24 @@ function renderTxnTable() {
     </tr>
   `).join('');
 
-  // History table
   const hBody = document.getElementById('historyTxnBody');
-  if (hBody) hBody.innerHTML = transactions.map(t => `
-    <tr>
-      <td><div class="txn-name-cell">
-        <div class="txn-avatar" style="background:${t.type==='credit'?'#ECFDF5':'#EBF0FD'};color:${t.type==='credit'?'#0D9488':'#1A56DB'}">
-          ${t.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
-        </div>
-        <div><div style="font-weight:600">${t.name}</div><div style="font-size:.74rem;color:var(--clr-muted)">${t.bank}</div></div>
-      </div></td>
-      <td style="font-size:.8rem;color:var(--clr-muted)">${t.from}</td>
-      <td style="font-family:var(--font-num);font-size:.78rem">${t.ref}</td>
-      <td style="font-size:.8rem">${t.date}</td>
-      <td class="txn-amount ${t.type}">${t.type==='debit'?'-':'+'}${fmtNaira(Math.abs(t.amount))}</td>
-      <td><span class="txn-status ${t.status}">● ${t.status.charAt(0).toUpperCase()+t.status.slice(1)}</span></td>
-    </tr>
-  `).join('');
+  if (hBody) {
+    hBody.innerHTML = transactions.map(t => `
+      <tr>
+        <td><div class="txn-name-cell">
+          <div class="txn-avatar" style="background:${t.type==='credit'?'#ECFDF5':'#EBF0FD'};color:${t.type==='credit'?'#0D9488':'#1A56DB'}">
+            ${t.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+          </div>
+          <div><div style="font-weight:600">${t.name}</div><div style="font-size:.74rem;color:var(--clr-muted)">${t.bank}</div></div>
+        </div></td>
+        <td style="font-size:.8rem;color:var(--clr-muted)">${t.from}</td>
+        <td style="font-family:var(--font-num);font-size:.78rem">${t.ref}</td>
+        <td style="font-size:.8rem">${t.date}</td>
+        <td class="txn-amount ${t.type}">${t.type==='debit'?'-':'+'}${fmtNaira(Math.abs(t.amount))}</td>
+        <td><span class="txn-status ${t.status}">● ${t.status.charAt(0).toUpperCase()+t.status.slice(1)}</span></td>
+      </tr>
+    `).join('');
+  }
 }
 
 function viewTxn(ref) {
@@ -203,6 +233,7 @@ function viewTxn(ref) {
 /* ── Render Beneficiaries ── */
 function renderBenefChips() {
   const list = document.getElementById('benefList');
+  if (!list) return;
   if (!beneficiaries.length) {
     list.innerHTML = '<span class="text-muted" style="font-size:.8rem;">No saved beneficiaries</span>';
     return;
@@ -242,12 +273,16 @@ function fillBeneficiary(acct, name, bank, chip) {
   chip.classList.add('selected');
   document.getElementById('recipientAcct').value = acct;
   document.getElementById('recipientName').value = name;
-  document.getElementById('verifiedName').textContent = '✓ ' + name + ' verified';
-  document.getElementById('verifiedName').style.display = 'block';
-  // Find bank code
+  const verifiedEl = document.getElementById('verifiedName');
+  if (verifiedEl) {
+    verifiedEl.textContent = '✓ ' + name + ' verified';
+    verifiedEl.style.display = 'block';
+  }
   const bankSel = document.getElementById('recipientBank');
-  for (const opt of bankSel.options) {
-    if (opt.text.toLowerCase().includes(bank.toLowerCase())) { bankSel.value = opt.value; break; }
+  if (bankSel) {
+    for (const opt of bankSel.options) {
+      if (opt.text.toLowerCase().includes(bank.toLowerCase())) { bankSel.value = opt.value; break; }
+    }
   }
 }
 
@@ -257,7 +292,7 @@ async function verifyAccount(inp) {
   inp.value = acct;
   const verifiedEl = document.getElementById('verifiedName');
   const nameField = document.getElementById('recipientName');
-  const bankCode = document.getElementById('recipientBank').value;
+  const bankCode = document.getElementById('recipientBank')?.value;
 
   if (acct.length === 10 && bankCode) {
     try {
@@ -267,23 +302,25 @@ async function verifyAccount(inp) {
         body: JSON.stringify({ accountNumber: acct, bankCode })
       });
       const data = await resp.json();
-      if (data.success) {
-        nameField.value = data.data.account_name;
-        verifiedEl.style.display = 'block';
-        verifiedEl.textContent = `✓ ${data.data.account_name} verified`;
-        verifiedEl.style.color = 'var(--clr-success)';
-      } else {
-        verifiedEl.style.display = 'block';
-        verifiedEl.textContent = '✗ ' + data.message;
-        verifiedEl.style.color = 'var(--clr-danger)';
+      if (verifiedEl && nameField) {
+        if (data.success) {
+          nameField.value = data.data.account_name;
+          verifiedEl.style.display = 'block';
+          verifiedEl.textContent = `✓ ${data.data.account_name} verified`;
+          verifiedEl.style.color = 'var(--clr-success)';
+        } else {
+          verifiedEl.style.display = 'block';
+          verifiedEl.textContent = '✗ ' + data.message;
+          verifiedEl.style.color = 'var(--clr-danger)';
+        }
       }
     } catch (err) {
       console.error(err);
       showToast('Verification failed', 'error');
     }
   } else {
-    verifiedEl.style.display = 'none';
-    nameField.value = '';
+    if (verifiedEl) verifiedEl.style.display = 'none';
+    if (nameField) nameField.value = '';
   }
 }
 
@@ -292,11 +329,10 @@ function goToStep1() { setStep(1); }
 function goToStep2() {
   // Validate
   let valid = true;
-  const src = document.getElementById('sourceAccount').value;
-  const bank = document.getElementById('recipientBank').value;
-  const acct = document.getElementById('recipientAcct').value;
-  // Clean amount: remove commas and parse as float
-  const rawAmount = document.getElementById('amount').value;
+  const src = document.getElementById('sourceAccount')?.value;
+  const bank = document.getElementById('recipientBank')?.value;
+  const acct = document.getElementById('recipientAcct')?.value;
+  const rawAmount = document.getElementById('amount')?.value || '';
   const cleaned = rawAmount.replace(/,/g, '');
   const amt = parseFloat(cleaned);
 
@@ -306,9 +342,14 @@ function goToStep2() {
   if (!amt || amt <= 0) { showErr('errAmount'); valid = false; } else hideErr('errAmount');
   if (!valid) { showToast('Please fill all required fields.', 'error'); return; }
 
-  const narr = document.getElementById('narration').value || 'Fund Transfer';
-  const recName = document.getElementById('recipientName').value || 'Recipient';
+  const narr = document.getElementById('narration')?.value || 'Fund Transfer';
+  const recName = document.getElementById('recipientName')?.value || 'Recipient';
   const srcAcc = accounts[src];
+
+  if (!srcAcc) {
+    showToast('Source account not found.', 'error');
+    return;
+  }
 
   currentTransferData = {
     source: srcAcc.name,
@@ -318,26 +359,30 @@ function goToStep2() {
     name: recName,
     amount: amt,
     narration: narr,
-    date: document.getElementById('transferDate').value || '2026-07-31',
-    priority: document.getElementById('priority').value,
+    date: document.getElementById('transferDate')?.value || '2026-07-31',
+    priority: document.getElementById('priority')?.value || 'normal',
     fee: 50
   };
 
   const large = amt > 1000000;
-  document.getElementById('largeAmtWarning').style.display = large ? 'flex' : 'none';
+  const warnEl = document.getElementById('largeAmtWarning');
+  if (warnEl) warnEl.style.display = large ? 'flex' : 'none';
 
-  document.getElementById('reviewBox').innerHTML = `
-    <div class="review-row"><span class="rl">Source Account</span><span class="rv">${currentTransferData.source}</span></div>
-    <div class="review-row"><span class="rl">Recipient Bank</span><span class="rv">${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}</span></div>
-    <div class="review-row"><span class="rl">Account Number</span><span class="rv">${currentTransferData.acct}</span></div>
-    <div class="review-row"><span class="rl">Account Name</span><span class="rv">${currentTransferData.name}</span></div>
-    <div class="review-row"><span class="rl">Narration</span><span class="rv">${currentTransferData.narration}</span></div>
-    <div class="review-row"><span class="rl">Transfer Date</span><span class="rv">${currentTransferData.date}</span></div>
-    <div class="review-row"><span class="rl">Priority</span><span class="rv">${currentTransferData.priority.charAt(0).toUpperCase()+currentTransferData.priority.slice(1)}</span></div>
-    <div class="review-row"><span class="rl">Amount</span><span class="rv">${fmtNaira(currentTransferData.amount)}</span></div>
-    <div class="review-row"><span class="rl">Transaction Fee</span><span class="rv">₦50.00</span></div>
-    <div class="review-total"><span>Total Debit</span><span class="rv">${fmtNaira(currentTransferData.amount + 50)}</span></div>
-  `;
+  const reviewBox = document.getElementById('reviewBox');
+  if (reviewBox) {
+    reviewBox.innerHTML = `
+      <div class="review-row"><span class="rl">Source Account</span><span class="rv">${currentTransferData.source}</span></div>
+      <div class="review-row"><span class="rl">Recipient Bank</span><span class="rv">${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}</span></div>
+      <div class="review-row"><span class="rl">Account Number</span><span class="rv">${currentTransferData.acct}</span></div>
+      <div class="review-row"><span class="rl">Account Name</span><span class="rv">${currentTransferData.name}</span></div>
+      <div class="review-row"><span class="rl">Narration</span><span class="rv">${currentTransferData.narration}</span></div>
+      <div class="review-row"><span class="rl">Transfer Date</span><span class="rv">${currentTransferData.date}</span></div>
+      <div class="review-row"><span class="rl">Priority</span><span class="rv">${currentTransferData.priority.charAt(0).toUpperCase()+currentTransferData.priority.slice(1)}</span></div>
+      <div class="review-row"><span class="rl">Amount</span><span class="rv">${fmtNaira(currentTransferData.amount)}</span></div>
+      <div class="review-row"><span class="rl">Transaction Fee</span><span class="rv">₦50.00</span></div>
+      <div class="review-total"><span>Total Debit</span><span class="rv">${fmtNaira(currentTransferData.amount + 50)}</span></div>
+    `;
+  }
   setStep(2);
 }
 
@@ -345,22 +390,27 @@ function goToStep3() {
   pinValue = '';
   updatePinDots();
   document.getElementById('pinAmountLabel').textContent = fmtNaira(currentTransferData.amount);
-  document.getElementById('pinRecipientLabel').textContent = currentTransferData.name + ' · ' + (bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank);
+  const bankName = bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank;
+  document.getElementById('pinRecipientLabel').textContent = currentTransferData.name + ' · ' + bankName;
   setStep(3);
 }
 
 function setStep(n) {
   for (let i = 1; i <= 3; i++) {
     const el = document.getElementById('transferStep' + i);
-    el.classList.remove('visible');
-    if (i === n) el.classList.add('visible');
+    if (el) el.classList.remove('visible');
+    if (i === n && el) el.classList.add('visible');
     const dot = document.getElementById('stepDot' + i);
-    dot.classList.remove('active', 'done');
-    if (i < n) dot.classList.add('done');
-    else if (i === n) dot.classList.add('active');
+    if (dot) {
+      dot.classList.remove('active', 'done');
+      if (i < n) dot.classList.add('done');
+      else if (i === n) dot.classList.add('active');
+    }
     const circle = document.getElementById('stepCircle' + i);
-    if (i < n) circle.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-    else circle.textContent = i;
+    if (circle) {
+      if (i < n) circle.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      else circle.textContent = i;
+    }
   }
 }
 
@@ -375,12 +425,14 @@ function pinDelete() { pinValue = pinValue.slice(0,-1); updatePinDots(); }
 function pinClear()  { pinValue = ''; updatePinDots(); }
 function updatePinDots() {
   for (let i = 1; i <= 4; i++) {
-    document.getElementById('pd' + i).classList.toggle('filled', i <= pinValue.length);
+    const dot = document.getElementById('pd' + i);
+    if (dot) dot.classList.toggle('filled', i <= pinValue.length);
   }
 }
 function checkPin() {
   if (pinValue.length === 4) {
-    document.getElementById('pinHint').textContent = 'Authorizing…';
+    const hint = document.getElementById('pinHint');
+    if (hint) hint.textContent = 'Authorizing…';
     setTimeout(executeTransfer, 800);
   }
 }
@@ -393,7 +445,7 @@ async function executeTransfer() {
     recipientAcct: currentTransferData.acct,
     amount: currentTransferData.amount,
     narration: currentTransferData.narration,
-    saveBenef: document.getElementById('saveBenef').checked
+    saveBenef: document.getElementById('saveBenef')?.checked || false
   };
 
   try {
@@ -408,10 +460,8 @@ async function executeTransfer() {
       currentTransferData.ref = ref;
       currentTransferData.timestamp = new Date().toLocaleString('en-NG', {dateStyle:'long',timeStyle:'short'});
 
-      // Refresh data
       await loadDashboard();
 
-      // Show success modal
       document.getElementById('txnRefDisplay').textContent = ref;
       document.getElementById('successSubText').textContent =
         `₦${currentTransferData.amount.toLocaleString('en-NG', {minimumFractionDigits:2})} has been sent to ${currentTransferData.name} — ${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}.`;
@@ -424,7 +474,8 @@ async function executeTransfer() {
         <div class="review-row"><span class="rl">Date &amp; Time</span><span class="rv">${currentTransferData.timestamp}</span></div>
       `;
       openModal('successModal');
-      document.getElementById('pinHint').textContent = 'Enter your 4-digit transaction PIN';
+      const hint = document.getElementById('pinHint');
+      if (hint) hint.textContent = 'Enter your 4-digit transaction PIN';
     } else {
       showToast('Transfer failed: ' + result.error, 'error');
     }
@@ -438,7 +489,9 @@ async function executeTransfer() {
 function printReceipt() {
   const d = currentTransferData;
   const bankName = bankList.find(b => b.code === d.bank)?.name || d.bank;
-  document.getElementById('receiptContent').innerHTML = `
+  const content = document.getElementById('receiptContent');
+  if (!content) return;
+  content.innerHTML = `
     <div class="rp-logo">
       <div class="rp-icon">P</div>
       PayStack Cloud
@@ -477,17 +530,19 @@ function shareReceipt() {
 
 /* ── Amount Preview ── */
 function updateAmountPreview() {
-  const raw = document.getElementById('amount').value;
+  const raw = document.getElementById('amount')?.value || '';
   const cleaned = raw.replace(/,/g, '');
   const amt = parseFloat(cleaned) || 0;
   const box = document.getElementById('amountPreviewBox');
-  if (amt > 0) {
-    box.style.display = 'flex';
-    document.getElementById('amountPreviewVal').textContent = fmtNaira(amt + 50);
-    const fee = amt <= 5000 ? 10 : amt <= 50000 ? 25 : 50;
-    document.getElementById('txnFee').value = `₦${fee}.00 (Standard)`;
-  } else {
-    box.style.display = 'none';
+  if (box) {
+    if (amt > 0) {
+      box.style.display = 'flex';
+      document.getElementById('amountPreviewVal').textContent = fmtNaira(amt + 50);
+      const fee = amt <= 5000 ? 10 : amt <= 50000 ? 25 : 50;
+      document.getElementById('txnFee').value = `₦${fee}.00 (Standard)`;
+    } else {
+      box.style.display = 'none';
+    }
   }
 }
 
@@ -495,24 +550,31 @@ function updateAmountPreview() {
 function resetTransfer() {
   ['sourceAccount','recipientBank','recipientAcct','recipientName','amount','narration'].forEach(id => {
     const el = document.getElementById(id);
-    if (el.tagName === 'SELECT') el.value = '';
-    else el.value = '';
+    if (el) {
+      if (el.tagName === 'SELECT') el.value = '';
+      else el.value = '';
+    }
   });
-  document.getElementById('amountPreviewBox').style.display = 'none';
-  document.getElementById('verifiedName').style.display = 'none';
+  const box = document.getElementById('amountPreviewBox');
+  if (box) box.style.display = 'none';
+  const verified = document.getElementById('verifiedName');
+  if (verified) verified.style.display = 'none';
   pinValue = ''; updatePinDots();
   setStep(1);
 }
 
 /* ── Modal ── */
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) { const el = document.getElementById(id); if (el) el.classList.add('open'); }
+function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('open'); }
 
 /* ── Toast ── */
 let toastTimer;
 function showToast(msg, type='success') {
+  ensureToast(); // make sure it exists
   const t = document.getElementById('toast');
-  t.querySelector('#toastMsg').textContent = msg;
+  if (!t) return;
+  const msgSpan = document.getElementById('toastMsg');
+  if (msgSpan) msgSpan.textContent = msg;
   t.className = 'toast show ' + type;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
@@ -520,10 +582,12 @@ function showToast(msg, type='success') {
 
 /* ── Errors ── */
 function showErr(id) {
-  const el = document.getElementById(id); if(el) el.style.display='block';
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'block';
 }
 function hideErr(id) {
-  const el = document.getElementById(id); if(el) el.style.display='none';
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
 }
 
 /* ── Format Naira ── */
@@ -534,11 +598,13 @@ function fmtNaira(n) {
 /* ── Section Navigation ── */
 function showSection(id) {
   document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
-  document.getElementById('sec-' + id).style.display = 'block';
+  const target = document.getElementById('sec-' + id);
+  if (target) target.style.display = 'block';
   document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-  const items = document.querySelectorAll('.sidebar-item');
-  items.forEach(item => {
-    if (item.getAttribute('onclick') && item.getAttribute('onclick').includes("'"+id+"'")) item.classList.add('active');
+  document.querySelectorAll('.sidebar-item').forEach(item => {
+    if (item.getAttribute('onclick') && item.getAttribute('onclick').includes("'"+id+"'")) {
+      item.classList.add('active');
+    }
   });
   window.scrollTo(0,0);
 }
@@ -546,18 +612,21 @@ function showSection(id) {
 /* ── Tab Switcher ── */
 function switchTab(btn, targetId) {
   const panel = btn.closest('.panel');
-  const tabs = btn.parentElement.querySelectorAll('.tab-btn');
+  if (!panel) return;
+  const tabs = panel.querySelectorAll('.tab-btn');
   tabs.forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   const contents = panel.querySelectorAll('.tab-content');
   contents.forEach(c => c.classList.remove('active'));
-  document.getElementById(targetId).classList.add('active');
+  const target = document.getElementById(targetId);
+  if (target) target.classList.add('active');
 }
 
 /* ── Open Transfer with account preset ── */
 function openTransferWithAccount(name, id) {
   showSection('transfer');
   const sel = document.getElementById('sourceAccount');
+  if (!sel) return;
   if (name.includes('Investment')) sel.value = 'inv';
   else if (name.includes('Current')) sel.value = 'cur';
   else if (name.includes('Savings')) sel.value = 'sav';
@@ -565,13 +634,15 @@ function openTransferWithAccount(name, id) {
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', () => {
-  populateBankDropdown();  // <-- Populate bank dropdown safely after DOM ready
+  populateBankDropdown();
   loadDashboard();
   setStep(1);
   // Close modal on overlay click
   document.querySelectorAll('.modal-overlay').forEach(ov => {
     ov.addEventListener('click', e => { if(e.target === ov) ov.classList.remove('open'); });
   });
+  // Ensure toast exists (it should, but just in case)
+  ensureToast();
 });
 </script>
 </body>
