@@ -3,12 +3,28 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-// Check if Paystack secret is set
-if (!process.env.PAYSTACK_SECRET_KEY) {
-  console.warn('⚠️ PAYSTACK_SECRET_KEY is not set. Transfers will fail.');
+let Paystack;
+let useMock = false;
+
+try {
+  if (process.env.PAYSTACK_SECRET_KEY) {
+    Paystack = require('paystack')(process.env.PAYSTACK_SECRET_KEY);
+    // Check if the client is properly initialized
+    if (!Paystack.verification || !Paystack.transfer) {
+      console.warn('⚠️ Paystack client missing methods – using mock mode');
+      useMock = true;
+    } else {
+      console.log('✅ Paystack client initialized successfully');
+    }
+  } else {
+    console.warn('⚠️ PAYSTACK_SECRET_KEY not set – using mock mode');
+    useMock = true;
+  }
+} catch (err) {
+  console.error('❌ Failed to initialize Paystack:', err.message);
+  useMock = true;
 }
 
-const Paystack = require('paystack')(process.env.PAYSTACK_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -45,7 +61,7 @@ let beneficiaries = [
 
 // ------------------ API ROUTES ------------------
 
-// 1. Verify bank account – with improved logging and error handling
+// 1. Verify account – with mock fallback
 app.post('/api/verify-account', async (req, res) => {
   const { accountNumber, bankCode } = req.body;
   console.log(`[VERIFY] accountNumber=${accountNumber}, bankCode=${bankCode}`);
@@ -54,13 +70,12 @@ app.post('/api/verify-account', async (req, res) => {
     return res.status(400).json({ error: 'accountNumber and bankCode required' });
   }
 
-  // Optional: if Paystack secret is missing, return a mock response for testing
-  if (!process.env.PAYSTACK_SECRET_KEY) {
-    console.warn('[VERIFY] No PAYSTACK_SECRET_KEY, returning mock verification');
+  if (useMock) {
+    console.warn('[VERIFY] Mock mode: returning fake verification');
     return res.json({
       success: true,
       data: {
-        account_name: 'Test Account (Mock)',
+        account_name: 'Mock Account',
         account_number: accountNumber,
         bank_code: bankCode
       }
@@ -69,7 +84,6 @@ app.post('/api/verify-account', async (req, res) => {
 
   try {
     const response = await Paystack.verification.resolveAccount(accountNumber, bankCode);
-    console.log('[VERIFY] Paystack response:', response.status ? 'success' : 'failed', response.message);
     if (response.status) {
       return res.json({ success: true, data: response.data });
     } else {
@@ -77,28 +91,25 @@ app.post('/api/verify-account', async (req, res) => {
     }
   } catch (error) {
     console.error('[VERIFY] Error:', error.message);
-    // If Paystack returns an error object with response, extract message
     const msg = error.response?.data?.message || error.message || 'Verification failed';
     return res.status(500).json({ error: msg });
   }
 });
 
-// 2. Initiate transfer – with mock fallback if secret missing
+// 2. Initiate transfer – with mock fallback
 app.post('/api/transfer', async (req, res) => {
   const { sourceAccount, recipientBank, recipientAcct, amount, narration, saveBenef } = req.body;
-  console.log(`[TRANSFER] source=${sourceAccount}, bank=${recipientBank}, acct=${recipientAcct}, amount=${amount}`);
-
-  // Clean amount (if it came as string with commas)
   const cleanedAmount = typeof amount === 'string' ? amount.replace(/,/g, '') : amount;
   const amountNum = parseFloat(cleanedAmount);
+
+  console.log(`[TRANSFER] source=${sourceAccount}, bank=${recipientBank}, acct=${recipientAcct}, amount=${amountNum}`);
 
   if (!sourceAccount || !recipientBank || !recipientAcct || !amountNum || amountNum <= 0) {
     return res.status(400).json({ error: 'Missing or invalid transfer details' });
   }
 
-  // If no secret key, return mock success for testing
-  if (!process.env.PAYSTACK_SECRET_KEY) {
-    console.warn('[TRANSFER] No PAYSTACK_SECRET_KEY, returning mock transfer success');
+  if (useMock) {
+    console.warn('[TRANSFER] Mock mode: returning fake success');
     return res.json({
       success: true,
       transfer: { reference: 'MOCK-' + Date.now() },
@@ -107,9 +118,7 @@ app.post('/api/transfer', async (req, res) => {
   }
 
   const amountInKobo = Math.round(amountNum * 100);
-
   try {
-    // 1. Create recipient
     const recipientResponse = await Paystack.transfer.createRecipient({
       type: 'nuban',
       name: 'Recipient Name',
@@ -118,12 +127,9 @@ app.post('/api/transfer', async (req, res) => {
       currency: 'NGN'
     });
     if (!recipientResponse.status) {
-      console.warn('[TRANSFER] Recipient creation failed:', recipientResponse.message);
       return res.status(400).json({ error: recipientResponse.message });
     }
     const recipientCode = recipientResponse.data.recipient_code;
-
-    // 2. Initiate transfer
     const transferResponse = await Paystack.transfer.initiate({
       source: 'balance',
       amount: amountInKobo,
@@ -132,19 +138,16 @@ app.post('/api/transfer', async (req, res) => {
       reference: 'PS-' + Date.now()
     });
     if (transferResponse.status) {
-      console.log('[TRANSFER] Success, ref:', transferResponse.data.reference);
       return res.json({
         success: true,
         transfer: transferResponse.data,
         reference: transferResponse.data.reference
       });
     } else {
-      console.warn('[TRANSFER] Initiation failed:', transferResponse.message);
       return res.status(400).json({ error: transferResponse.message });
     }
   } catch (error) {
     console.error('[TRANSFER] Error:', error.message);
-    // Extract detailed error from Paystack if available
     const msg = error.response?.data?.message || error.message || 'Transfer failed';
     return res.status(500).json({ error: msg });
   }
@@ -184,4 +187,5 @@ app.post('/api/beneficiaries', (req, res) => {
 // Start server
 app.listen(port, () => {
   console.log(`PayStack Cloud backend running on port ${port}`);
+  console.log(`Mock mode: ${useMock ? 'ON' : 'OFF'}`);
 });
