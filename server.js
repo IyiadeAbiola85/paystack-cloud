@@ -3,6 +3,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
+// --- DEBUG: log the key (first 10 chars) ---
+const secretKey = process.env.PAYSTACK_SECRET_KEY;
+console.log('🔍 DEBUG: PAYSTACK_SECRET_KEY =', secretKey ? secretKey.slice(0, 10) + '... (length ' + secretKey.length + ')' : '❌ NOT FOUND');
+
+// ... rest of your code (same as the previous updated server.js)
+
 const app = express();
 const port = process.env.PORT || 3000;
 
