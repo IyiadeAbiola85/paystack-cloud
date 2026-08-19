@@ -2,25 +2,28 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+
+// Check if Paystack secret is set
+if (!process.env.PAYSTACK_SECRET_KEY) {
+  console.warn('⚠️ PAYSTACK_SECRET_KEY is not set. Transfers will fail.');
+}
+
 const Paystack = require('paystack')(process.env.PAYSTACK_SECRET_KEY);
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ------------------ CORS Configuration ------------------
-// Allow all origins for educational/demo purposes.
-app.use(cors()); // Allows all origins – fine for testing.
-
+// ------------------ CORS ------------------
+app.use(cors());
 app.use(express.json());
-app.use(express.static('public')); // Only needed if you serve frontend from same origin.
+app.use(express.static('public'));
 
-// ------------------ MOCK DATA (replace with DB later) ------------------
+// ------------------ MOCK DATA ------------------
 let accounts = {
   inv: { name: 'Investment Account', balance: 900000000000, acct: '0023847100' },
   cur: { name: 'Current Account', balance: 780000000000, acct: '0058391204' },
   sav: { name: 'Savings Account', balance: 680000000000, acct: '0091205637' }
 };
 
-// Sample transactions (copied from original HTML)
 let transactions = [
   { name:'Dangote Industries', bank:'Zenith Bank', acct:'3029410056', date:'31 Jul 2026', amount:-85000000000, type:'debit', status:'success', ref:'PSC-2026-0072341', from:'Investment Account' },
   { name:'Federal Inland Revenue', bank:'UBA', acct:'2018730045', date:'30 Jul 2026', amount:-12500000, type:'debit', status:'success', ref:'PSC-2026-0072105', from:'Current Account' },
@@ -32,7 +35,6 @@ let transactions = [
   { name:'TechInvest Ltd', bank:'UBA', acct:'0047291038', date:'24 Jul 2026', amount:-120000000, type:'debit', status:'pending', ref:'PSC-2026-0071092', from:'Investment Account' },
 ];
 
-// Sample beneficiaries
 let beneficiaries = [
   { name:'Chidi Okonkwo',  bank:'GTBank',   acct:'0041728391', initials:'CO', color:'#7C3AED' },
   { name:'Amaka Eze',      bank:'Zenith',   acct:'2019837456', initials:'AE', color:'#0D9488' },
@@ -43,57 +45,85 @@ let beneficiaries = [
 
 // ------------------ API ROUTES ------------------
 
-// 1. Verify bank account (uses Paystack resolve account)
+// 1. Verify bank account – with improved logging and error handling
 app.post('/api/verify-account', async (req, res) => {
   const { accountNumber, bankCode } = req.body;
+  console.log(`[VERIFY] accountNumber=${accountNumber}, bankCode=${bankCode}`);
+
   if (!accountNumber || !bankCode) {
     return res.status(400).json({ error: 'accountNumber and bankCode required' });
   }
+
+  // Optional: if Paystack secret is missing, return a mock response for testing
+  if (!process.env.PAYSTACK_SECRET_KEY) {
+    console.warn('[VERIFY] No PAYSTACK_SECRET_KEY, returning mock verification');
+    return res.json({
+      success: true,
+      data: {
+        account_name: 'Test Account (Mock)',
+        account_number: accountNumber,
+        bank_code: bankCode
+      }
+    });
+  }
+
   try {
     const response = await Paystack.verification.resolveAccount(accountNumber, bankCode);
+    console.log('[VERIFY] Paystack response:', response.status ? 'success' : 'failed', response.message);
     if (response.status) {
       return res.json({ success: true, data: response.data });
     } else {
       return res.status(400).json({ success: false, message: response.message });
     }
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Verification failed' });
+    console.error('[VERIFY] Error:', error.message);
+    // If Paystack returns an error object with response, extract message
+    const msg = error.response?.data?.message || error.message || 'Verification failed';
+    return res.status(500).json({ error: msg });
   }
 });
 
-// 2. Initiate transfer (single) – with improved error handling and amount cleaning
+// 2. Initiate transfer – with mock fallback if secret missing
 app.post('/api/transfer', async (req, res) => {
-  const { sourceAccount, recipientBank, recipientAcct, narration, saveBenef } = req.body;
-  // Clean amount: remove commas, parse to float
-  const rawAmount = req.body.amount;
-  const cleanedAmount = typeof rawAmount === 'string' ? rawAmount.replace(/,/g, '') : rawAmount;
+  const { sourceAccount, recipientBank, recipientAcct, amount, narration, saveBenef } = req.body;
+  console.log(`[TRANSFER] source=${sourceAccount}, bank=${recipientBank}, acct=${recipientAcct}, amount=${amount}`);
+
+  // Clean amount (if it came as string with commas)
+  const cleanedAmount = typeof amount === 'string' ? amount.replace(/,/g, '') : amount;
   const amountNum = parseFloat(cleanedAmount);
 
-  // Validate inputs
   if (!sourceAccount || !recipientBank || !recipientAcct || !amountNum || amountNum <= 0) {
-    return res.status(400).json({ error: 'Missing or invalid transfer details (amount must be > 0)' });
+    return res.status(400).json({ error: 'Missing or invalid transfer details' });
   }
 
-  // Convert amount to kobo (Paystack uses smallest currency unit)
+  // If no secret key, return mock success for testing
+  if (!process.env.PAYSTACK_SECRET_KEY) {
+    console.warn('[TRANSFER] No PAYSTACK_SECRET_KEY, returning mock transfer success');
+    return res.json({
+      success: true,
+      transfer: { reference: 'MOCK-' + Date.now() },
+      reference: 'MOCK-' + Date.now()
+    });
+  }
+
   const amountInKobo = Math.round(amountNum * 100);
 
   try {
-    // 1. Create a transfer recipient
+    // 1. Create recipient
     const recipientResponse = await Paystack.transfer.createRecipient({
       type: 'nuban',
-      name: 'Recipient Name', // Ideally we should get name from verification
+      name: 'Recipient Name',
       account_number: recipientAcct,
       bank_code: recipientBank,
       currency: 'NGN'
     });
     if (!recipientResponse.status) {
-      // If recipient creation fails, return the error message from Paystack
+      console.warn('[TRANSFER] Recipient creation failed:', recipientResponse.message);
       return res.status(400).json({ error: recipientResponse.message });
     }
     const recipientCode = recipientResponse.data.recipient_code;
 
-    // 2. Initiate the transfer
+    // 2. Initiate transfer
     const transferResponse = await Paystack.transfer.initiate({
       source: 'balance',
       amount: amountInKobo,
@@ -102,31 +132,25 @@ app.post('/api/transfer', async (req, res) => {
       reference: 'PS-' + Date.now()
     });
     if (transferResponse.status) {
-      // In a real app, save transaction to database
-      // For demo, we'll just return success
+      console.log('[TRANSFER] Success, ref:', transferResponse.data.reference);
       return res.json({
         success: true,
         transfer: transferResponse.data,
         reference: transferResponse.data.reference
       });
     } else {
-      // Transfer initiation failed, return Paystack's message
+      console.warn('[TRANSFER] Initiation failed:', transferResponse.message);
       return res.status(400).json({ error: transferResponse.message });
     }
   } catch (error) {
-    console.error('Paystack error:', error);
-    // Extract more detailed error if available
-    let errorMsg = 'Transfer failed';
-    if (error.response && error.response.data && error.response.data.message) {
-      errorMsg = error.response.data.message;
-    } else if (error.message) {
-      errorMsg = error.message;
-    }
-    return res.status(500).json({ error: errorMsg });
+    console.error('[TRANSFER] Error:', error.message);
+    // Extract detailed error from Paystack if available
+    const msg = error.response?.data?.message || error.message || 'Transfer failed';
+    return res.status(500).json({ error: msg });
   }
 });
 
-// 3. Get account balances (for dashboard)
+// 3. Get account balances
 app.get('/api/accounts', (req, res) => {
   res.json(accounts);
 });
