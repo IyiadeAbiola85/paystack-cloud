@@ -3,27 +3,21 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-// --- DEBUG: log the key (first 10 chars) ---
-const secretKey = process.env.PAYSTACK_SECRET_KEY;
-console.log('🔍 DEBUG: PAYSTACK_SECRET_KEY =', secretKey ? secretKey.slice(0, 10) + '... (length ' + secretKey.length + ')' : '❌ NOT FOUND');
-
-// ... rest of your code (same as the previous updated server.js)
-
 const app = express();
 const port = process.env.PORT || 3000;
 
 // ------------------ Paystack Initialisation ------------------
+const secretKey = process.env.PAYSTACK_SECRET_KEY;
+console.log('🔍 DEBUG: PAYSTACK_SECRET_KEY =', secretKey ? secretKey.slice(0, 10) + '... (length ' + secretKey.length + ')' : '❌ NOT FOUND');
+
 let paystackClient = null;
 let useMock = false;
 
-const secretKey = process.env.PAYSTACK_SECRET_KEY;
 if (secretKey) {
   console.log(`🔑 PAYSTACK_SECRET_KEY found (starts with: ${secretKey.slice(0, 10)}...)`);
   try {
-    // Dynamic require to avoid issues if package is missing
     const paystackModule = require('paystack');
     paystackClient = paystackModule(secretKey);
-    // Quick check to see if it's functional
     if (paystackClient.verification && paystackClient.transfer) {
       console.log('✅ Paystack client initialised successfully.');
       useMock = false;
@@ -96,7 +90,6 @@ app.post('/api/verify-account', async (req, res) => {
     });
   }
 
-  // Real Paystack verification
   try {
     const response = await paystackClient.verification.resolveAccount(accountNumber, bankCode);
     if (response.status) {
@@ -136,7 +129,6 @@ app.post('/api/transfer', async (req, res) => {
 
   const amountInKobo = Math.round(amountNum * 100);
   try {
-    // Create recipient
     const recipientResponse = await paystackClient.transfer.createRecipient({
       type: 'nuban',
       name: 'Recipient Name',
@@ -150,7 +142,6 @@ app.post('/api/transfer', async (req, res) => {
     }
     const recipientCode = recipientResponse.data.recipient_code;
 
-    // Initiate transfer
     const transferResponse = await paystackClient.transfer.initiate({
       source: 'balance',
       amount: amountInKobo,
