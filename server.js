@@ -3,32 +3,40 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-let Paystack;
-let useMock = false;
-
-try {
-  if (process.env.PAYSTACK_SECRET_KEY) {
-    Paystack = require('paystack')(process.env.PAYSTACK_SECRET_KEY);
-    // Check if the client is properly initialized
-    if (!Paystack.verification || !Paystack.transfer) {
-      console.warn('⚠️ Paystack client missing methods – using mock mode');
-      useMock = true;
-    } else {
-      console.log('✅ Paystack client initialized successfully');
-    }
-  } else {
-    console.warn('⚠️ PAYSTACK_SECRET_KEY not set – using mock mode');
-    useMock = true;
-  }
-} catch (err) {
-  console.error('❌ Failed to initialize Paystack:', err.message);
-  useMock = true;
-}
-
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ------------------ CORS ------------------
+// ------------------ Paystack Initialisation ------------------
+let paystackClient = null;
+let useMock = false;
+
+const secretKey = process.env.PAYSTACK_SECRET_KEY;
+if (secretKey) {
+  console.log(`🔑 PAYSTACK_SECRET_KEY found (starts with: ${secretKey.slice(0, 10)}...)`);
+  try {
+    // Dynamic require to avoid issues if package is missing
+    const paystackModule = require('paystack');
+    paystackClient = paystackModule(secretKey);
+    // Quick check to see if it's functional
+    if (paystackClient.verification && paystackClient.transfer) {
+      console.log('✅ Paystack client initialised successfully.');
+      useMock = false;
+    } else {
+      console.warn('⚠️ Paystack client initialised but missing methods – switching to mock mode.');
+      useMock = true;
+    }
+  } catch (err) {
+    console.error('❌ Failed to initialise Paystack:', err.message);
+    useMock = true;
+  }
+} else {
+  console.warn('⚠️ No PAYSTACK_SECRET_KEY found in environment. Running in MOCK mode.');
+  useMock = true;
+}
+
+console.log(`⚙️  Mock mode: ${useMock ? 'ON' : 'OFF'}`);
+
+// ------------------ CORS & Middleware ------------------
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
@@ -61,7 +69,7 @@ let beneficiaries = [
 
 // ------------------ API ROUTES ------------------
 
-// 1. Verify account – with mock fallback
+// 1. Verify Account
 app.post('/api/verify-account', async (req, res) => {
   const { accountNumber, bankCode } = req.body;
   console.log(`[VERIFY] accountNumber=${accountNumber}, bankCode=${bankCode}`);
@@ -71,22 +79,25 @@ app.post('/api/verify-account', async (req, res) => {
   }
 
   if (useMock) {
-    console.warn('[VERIFY] Mock mode: returning fake verification');
+    console.warn('[VERIFY] Mock mode – returning fake verification.');
     return res.json({
       success: true,
       data: {
-        account_name: 'Mock Account',
+        account_name: 'Mock Account (real mode would verify)',
         account_number: accountNumber,
         bank_code: bankCode
       }
     });
   }
 
+  // Real Paystack verification
   try {
-    const response = await Paystack.verification.resolveAccount(accountNumber, bankCode);
+    const response = await paystackClient.verification.resolveAccount(accountNumber, bankCode);
     if (response.status) {
+      console.log('[VERIFY] Real Paystack: success');
       return res.json({ success: true, data: response.data });
     } else {
+      console.warn('[VERIFY] Real Paystack failed:', response.message);
       return res.status(400).json({ success: false, message: response.message });
     }
   } catch (error) {
@@ -96,7 +107,7 @@ app.post('/api/verify-account', async (req, res) => {
   }
 });
 
-// 2. Initiate transfer – with mock fallback
+// 2. Initiate Transfer
 app.post('/api/transfer', async (req, res) => {
   const { sourceAccount, recipientBank, recipientAcct, amount, narration, saveBenef } = req.body;
   const cleanedAmount = typeof amount === 'string' ? amount.replace(/,/g, '') : amount;
@@ -109,7 +120,7 @@ app.post('/api/transfer', async (req, res) => {
   }
 
   if (useMock) {
-    console.warn('[TRANSFER] Mock mode: returning fake success');
+    console.warn('[TRANSFER] Mock mode – returning fake success.');
     return res.json({
       success: true,
       transfer: { reference: 'MOCK-' + Date.now() },
@@ -119,7 +130,8 @@ app.post('/api/transfer', async (req, res) => {
 
   const amountInKobo = Math.round(amountNum * 100);
   try {
-    const recipientResponse = await Paystack.transfer.createRecipient({
+    // Create recipient
+    const recipientResponse = await paystackClient.transfer.createRecipient({
       type: 'nuban',
       name: 'Recipient Name',
       account_number: recipientAcct,
@@ -127,10 +139,13 @@ app.post('/api/transfer', async (req, res) => {
       currency: 'NGN'
     });
     if (!recipientResponse.status) {
+      console.warn('[TRANSFER] Recipient creation failed:', recipientResponse.message);
       return res.status(400).json({ error: recipientResponse.message });
     }
     const recipientCode = recipientResponse.data.recipient_code;
-    const transferResponse = await Paystack.transfer.initiate({
+
+    // Initiate transfer
+    const transferResponse = await paystackClient.transfer.initiate({
       source: 'balance',
       amount: amountInKobo,
       recipient: recipientCode,
@@ -138,12 +153,14 @@ app.post('/api/transfer', async (req, res) => {
       reference: 'PS-' + Date.now()
     });
     if (transferResponse.status) {
+      console.log('[TRANSFER] Real Paystack: success, ref:', transferResponse.data.reference);
       return res.json({
         success: true,
         transfer: transferResponse.data,
         reference: transferResponse.data.reference
       });
     } else {
+      console.warn('[TRANSFER] Initiation failed:', transferResponse.message);
       return res.status(400).json({ error: transferResponse.message });
     }
   } catch (error) {
@@ -186,6 +203,6 @@ app.post('/api/beneficiaries', (req, res) => {
 
 // Start server
 app.listen(port, () => {
-  console.log(`PayStack Cloud backend running on port ${port}`);
-  console.log(`Mock mode: ${useMock ? 'ON' : 'OFF'}`);
+  console.log(`🚀 PayStack Cloud backend running on port ${port}`);
+  console.log(`🔮 Mock mode: ${useMock ? 'ON (all transactions will be simulated)' : 'OFF (using real Paystack API)'}`);
 });
