@@ -1,47 +1,18 @@
-// server.js
+// server.js – no mock, always real
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 
 const app = express();
 const port = process.env.PORT || 3000;
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
 
-// ------------------ Paystack Initialisation ------------------
-const secretKey = process.env.PAYSTACK_SECRET_KEY;
-console.log('🔍 DEBUG: PAYSTACK_SECRET_KEY =', secretKey ? secretKey.slice(0, 10) + '... (length ' + secretKey.length + ')' : '❌ NOT FOUND');
-
-let paystackClient = null;
-let useMock = false;
-
-if (secretKey) {
-  console.log(`🔑 PAYSTACK_SECRET_KEY found (starts with: ${secretKey.slice(0, 10)}...)`);
-  try {
-    const paystackModule = require('paystack');
-    paystackClient = paystackModule(secretKey);
-    if (paystackClient.verification && paystackClient.transfer) {
-      console.log('✅ Paystack client initialised successfully.');
-      useMock = false;
-    } else {
-      console.warn('⚠️ Paystack client initialised but missing methods – switching to mock mode.');
-      useMock = true;
-    }
-  } catch (err) {
-    console.error('❌ Failed to initialise Paystack:', err.message);
-    useMock = true;
-  }
-} else {
-  console.warn('⚠️ No PAYSTACK_SECRET_KEY found in environment. Running in MOCK mode.');
-  useMock = true;
-}
-
-console.log(`⚙️  Mock mode: ${useMock ? 'ON' : 'OFF'}`);
-
-// ------------------ CORS & Middleware ------------------
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// ------------------ MOCK DATA ------------------
+// ------------------ Mock Data ------------------
 let accounts = {
   inv: { name: 'Investment Account', balance: 900000000000, acct: '0023847100' },
   cur: { name: 'Current Account', balance: 780000000000, acct: '0058391204' },
@@ -67,107 +38,109 @@ let beneficiaries = [
   { name:'Bola Tinubu Jr', bank:'First Bank',acct:'3001827465',initials:'BT', color:'#1A56DB' },
 ];
 
-// ------------------ API ROUTES ------------------
+// ------------------ API ROUTES (always real) ------------------
 
-// 1. Verify Account
+// 1. Verify Account – always calls Paystack
 app.post('/api/verify-account', async (req, res) => {
   const { accountNumber, bankCode } = req.body;
-  console.log(`[VERIFY] accountNumber=${accountNumber}, bankCode=${bankCode}`);
+  console.log(`[VERIFY] account=${accountNumber}, bank=${bankCode}`);
 
   if (!accountNumber || !bankCode) {
     return res.status(400).json({ error: 'accountNumber and bankCode required' });
   }
 
-  if (useMock) {
-    console.warn('[VERIFY] Mock mode – returning fake verification.');
-    return res.json({
-      success: true,
-      data: {
-        account_name: 'Mock Account (real mode would verify)',
-        account_number: accountNumber,
-        bank_code: bankCode
-      }
-    });
+  // If no secret key, return a clear error
+  if (!PAYSTACK_SECRET || PAYSTACK_SECRET.length < 10) {
+    return res.status(400).json({ error: 'PAYSTACK_SECRET_KEY is not set or invalid' });
   }
 
   try {
-    const response = await paystackClient.verification.resolveAccount(accountNumber, bankCode);
-    if (response.status) {
-      console.log('[VERIFY] Real Paystack: success');
-      return res.json({ success: true, data: response.data });
+    const response = await axios({
+      method: 'get',
+      url: `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` }
+    });
+
+    if (response.data.status) {
+      return res.json({ success: true, data: response.data.data });
     } else {
-      console.warn('[VERIFY] Real Paystack failed:', response.message);
-      return res.status(400).json({ success: false, message: response.message });
+      return res.status(400).json({ success: false, message: response.data.message });
     }
   } catch (error) {
-    console.error('[VERIFY] Error:', error.message);
+    console.error('[VERIFY] Error:', error.response?.data?.message || error.message);
     const msg = error.response?.data?.message || error.message || 'Verification failed';
     return res.status(500).json({ error: msg });
   }
 });
 
-// 2. Initiate Transfer
+// 2. Initiate Transfer – always calls Paystack
 app.post('/api/transfer', async (req, res) => {
-  const { sourceAccount, recipientBank, recipientAcct, amount, narration, saveBenef } = req.body;
-  const cleanedAmount = typeof amount === 'string' ? amount.replace(/,/g, '') : amount;
-  const amountNum = parseFloat(cleanedAmount);
-
+  const { sourceAccount, recipientBank, recipientAcct, amount, narration } = req.body;
+  const amountNum = parseFloat(String(amount).replace(/,/g, ''));
   console.log(`[TRANSFER] source=${sourceAccount}, bank=${recipientBank}, acct=${recipientAcct}, amount=${amountNum}`);
 
   if (!sourceAccount || !recipientBank || !recipientAcct || !amountNum || amountNum <= 0) {
     return res.status(400).json({ error: 'Missing or invalid transfer details' });
   }
 
-  if (useMock) {
-    console.warn('[TRANSFER] Mock mode – returning fake success.');
-    return res.json({
-      success: true,
-      transfer: { reference: 'MOCK-' + Date.now() },
-      reference: 'MOCK-' + Date.now()
-    });
+  if (!PAYSTACK_SECRET || PAYSTACK_SECRET.length < 10) {
+    return res.status(400).json({ error: 'PAYSTACK_SECRET_KEY is not set or invalid' });
   }
 
   const amountInKobo = Math.round(amountNum * 100);
-  try {
-    const recipientResponse = await paystackClient.transfer.createRecipient({
-      type: 'nuban',
-      name: 'Recipient Name',
-      account_number: recipientAcct,
-      bank_code: recipientBank,
-      currency: 'NGN'
-    });
-    if (!recipientResponse.status) {
-      console.warn('[TRANSFER] Recipient creation failed:', recipientResponse.message);
-      return res.status(400).json({ error: recipientResponse.message });
-    }
-    const recipientCode = recipientResponse.data.recipient_code;
 
-    const transferResponse = await paystackClient.transfer.initiate({
-      source: 'balance',
-      amount: amountInKobo,
-      recipient: recipientCode,
-      reason: narration || 'Fund Transfer',
-      reference: 'PS-' + Date.now()
+  try {
+    // Create recipient
+    const recipientResp = await axios({
+      method: 'post',
+      url: 'https://api.paystack.co/transferrecipient',
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+      data: {
+        type: 'nuban',
+        name: 'Recipient Name',
+        account_number: recipientAcct,
+        bank_code: recipientBank,
+        currency: 'NGN'
+      }
     });
-    if (transferResponse.status) {
-      console.log('[TRANSFER] Real Paystack: success, ref:', transferResponse.data.reference);
+
+    if (!recipientResp.data.status) {
+      return res.status(400).json({ error: recipientResp.data.message });
+    }
+    const recipientCode = recipientResp.data.data.recipient_code;
+
+    // Initiate transfer
+    const transferResp = await axios({
+      method: 'post',
+      url: 'https://api.paystack.co/transfer',
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET}` },
+      data: {
+        source: 'balance',
+        amount: amountInKobo,
+        recipient: recipientCode,
+        reason: narration || 'Fund Transfer',
+        reference: 'PS-' + Date.now()
+      }
+    });
+
+    if (transferResp.data.status) {
+      console.log('[TRANSFER] Success, ref:', transferResp.data.data.reference);
       return res.json({
         success: true,
-        transfer: transferResponse.data,
-        reference: transferResponse.data.reference
+        transfer: transferResp.data.data,
+        reference: transferResp.data.data.reference
       });
     } else {
-      console.warn('[TRANSFER] Initiation failed:', transferResponse.message);
-      return res.status(400).json({ error: transferResponse.message });
+      return res.status(400).json({ error: transferResp.data.message });
     }
   } catch (error) {
-    console.error('[TRANSFER] Error:', error.message);
+    console.error('[TRANSFER] Error:', error.response?.data?.message || error.message);
     const msg = error.response?.data?.message || error.message || 'Transfer failed';
     return res.status(500).json({ error: msg });
   }
 });
 
-// 3. Get account balances
+// 3. Get accounts
 app.get('/api/accounts', (req, res) => {
   res.json(accounts);
 });
@@ -182,7 +155,7 @@ app.get('/api/beneficiaries', (req, res) => {
   res.json(beneficiaries);
 });
 
-// 6. Save beneficiary (optional)
+// 6. Save beneficiary
 app.post('/api/beneficiaries', (req, res) => {
   const { name, bank, acct } = req.body;
   if (name && bank && acct) {
@@ -201,5 +174,5 @@ app.post('/api/beneficiaries', (req, res) => {
 // Start server
 app.listen(port, () => {
   console.log(`🚀 PayStack Cloud backend running on port ${port}`);
-  console.log(`🔮 Mock mode: ${useMock ? 'ON (all transactions will be simulated)' : 'OFF (using real Paystack API)'}`);
+  console.log(`🔐 Paystack key ${PAYSTACK_SECRET ? 'is set' : 'is NOT set'}`);
 });
