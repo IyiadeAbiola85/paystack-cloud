@@ -644,6 +644,115 @@
   .mt-16 { margin-top: 16px; } .mt-24 { margin-top: 24px; }
   .mb-0 { margin-bottom: 0; }
   .gap-8 { gap: 8px; }
+
+  /* ── OTP Modal Styles ── */
+  .otp-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .otp-modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .otp-modal {
+    background: var(--clr-surface);
+    border-radius: var(--radius-lg);
+    padding: 36px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: var(--shadow-lg);
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+  }
+  .otp-modal-overlay.open .otp-modal {
+    transform: scale(1);
+  }
+  .otp-modal .otp-title {
+    font-family: var(--font-num);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--clr-text);
+  }
+  .otp-modal .otp-sub {
+    font-size: 0.88rem;
+    color: var(--clr-muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .otp-input-group {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .otp-input-group input {
+    width: 48px;
+    height: 56px;
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-family: var(--font-num);
+    border: 2px solid var(--clr-border);
+    border-radius: var(--radius-sm);
+    background: var(--clr-surface);
+    color: var(--clr-text);
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .otp-input-group input:focus {
+    border-color: var(--clr-accent);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+  }
+  .otp-input-group input.error {
+    border-color: var(--clr-danger);
+  }
+  .otp-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .otp-actions .btn {
+    width: 100%;
+  }
+  .otp-resend {
+    font-size: 0.8rem;
+    color: var(--clr-muted);
+    text-align: center;
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    text-decoration: underline;
+  }
+  .otp-resend:hover {
+    color: var(--clr-accent);
+  }
+  .otp-timer {
+    font-size: 0.8rem;
+    color: var(--clr-muted);
+    text-align: center;
+    margin-top: 8px;
+  }
+  .otp-error {
+    color: var(--clr-danger);
+    font-size: 0.82rem;
+    text-align: center;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .otp-error.show {
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -1275,6 +1384,37 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════ OTP MODAL ══════════════════════════════════ -->
+<div class="otp-modal-overlay" id="otpModal">
+  <div class="otp-modal">
+    <div class="otp-title">🔐 Enter OTP</div>
+    <div class="otp-sub" id="otpMessage">
+      We've sent a one-time password to your registered phone number and email. 
+      Please enter it below to complete your transfer.
+    </div>
+    
+    <div class="otp-error" id="otpError">Invalid OTP. Please try again.</div>
+    
+    <div class="otp-input-group" id="otpInputGroup">
+      <input type="text" maxlength="1" class="otp-digit" data-index="0" autofocus>
+      <input type="text" maxlength="1" class="otp-digit" data-index="1">
+      <input type="text" maxlength="1" class="otp-digit" data-index="2">
+      <input type="text" maxlength="1" class="otp-digit" data-index="3">
+      <input type="text" maxlength="1" class="otp-digit" data-index="4">
+      <input type="text" maxlength="1" class="otp-digit" data-index="5">
+    </div>
+    
+    <div class="otp-actions">
+      <button class="btn btn-primary btn-lg" id="otpConfirmBtn" onclick="confirmOTP()">
+        Confirm Transfer
+      </button>
+      <button class="btn btn-ghost" onclick="closeOTPModal()">Cancel</button>
+      <button class="otp-resend" onclick="resendOTP()">Resend OTP</button>
+      <div class="otp-timer" id="otpTimer">OTP expires in <span id="otpCountdown">5:00</span></div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════ RECEIPT (PRINT) ══════════════════════════════════ -->
 <div id="receiptArea">
   <div class="receipt-print" id="receiptContent"></div>
@@ -1321,14 +1461,18 @@ let accounts = {};
 let transactions = [];
 let beneficiaries = [];
 
-/* ── Populate bank dropdown (safe) ── */
+// ── OTP State ──
+let pendingTransfer = null;
+let otpTimerInterval = null;
+let otpSecondsRemaining = 300;
+
+/* ── Populate bank dropdown ── */
 function populateBankDropdown() {
   const bankSelect = document.getElementById('recipientBank');
   if (!bankSelect) {
     console.warn('Bank dropdown element not found.');
     return;
   }
-  // Clear existing options, keep the default placeholder
   bankSelect.innerHTML = '<option value="">-- Select Bank --</option>';
   bankList.forEach(b => {
     const opt = document.createElement('option');
@@ -1544,7 +1688,7 @@ function fillBeneficiary(acct, name, bank, chip) {
   }
 }
 
-/* ── Account Verification with improved error handling ── */
+/* ── Account Verification ── */
 async function verifyAccount(inp) {
   const acct = inp.value.replace(/\D/g, '');
   inp.value = acct;
@@ -1552,14 +1696,12 @@ async function verifyAccount(inp) {
   const nameField = document.getElementById('recipientName');
   const bankCode = document.getElementById('recipientBank')?.value;
 
-  // Reset verification state
   if (verifiedEl) {
     verifiedEl.style.display = 'none';
     verifiedEl.style.color = 'var(--clr-success)';
   }
   if (nameField) nameField.value = '';
 
-  // Validate length and bank selected
   if (acct.length !== 10) {
     if (verifiedEl) {
       verifiedEl.style.display = 'block';
@@ -1584,7 +1726,7 @@ async function verifyAccount(inp) {
       body: JSON.stringify({ accountNumber: acct, bankCode })
     });
     const data = await resp.json();
-    console.log('Verification response:', data); // Debug log
+    console.log('Verification response:', data);
 
     if (verifiedEl && nameField) {
       if (data.success && data.data && data.data.account_name) {
@@ -1592,10 +1734,8 @@ async function verifyAccount(inp) {
         verifiedEl.style.display = 'block';
         verifiedEl.textContent = `✓ ${data.data.account_name} verified`;
         verifiedEl.style.color = 'var(--clr-success)';
-        // update fee if needed
         document.getElementById('txnFee').value = '₦50.00 (Standard)';
       } else {
-        // Show error message from backend or fallback
         const errorMsg = data.message || data.error || 'Verification failed. Please check account number and bank.';
         verifiedEl.style.display = 'block';
         verifiedEl.textContent = '✗ ' + errorMsg;
@@ -1615,6 +1755,7 @@ async function verifyAccount(inp) {
 
 /* ── Transfer Steps ── */
 function goToStep1() { setStep(1); }
+
 function goToStep2() {
   // Validate
   let valid = true;
@@ -1648,7 +1789,7 @@ function goToStep2() {
     name: recName,
     amount: amt,
     narration: narr,
-    date: document.getElementById('transferDate')?.value || '2026-07-31',
+    date: document.getElementById('transferDate')?.value || new Date().toISOString().split('T')[0],
     priority: document.getElementById('priority')?.value || 'normal',
     fee: 50
   };
@@ -1726,7 +1867,7 @@ function checkPin() {
   }
 }
 
-/* ── Execute Transfer with improved error handling ── */
+/* ── Execute Transfer with OTP support ── */
 async function executeTransfer() {
   const payload = {
     sourceAccount: currentTransferData.sourceKey,
@@ -1737,27 +1878,45 @@ async function executeTransfer() {
     saveBenef: document.getElementById('saveBenef')?.checked || false
   };
 
+  const hint = document.getElementById('pinHint');
+  if (hint) hint.textContent = 'Processing...';
+
   try {
-    const resp = await fetch(`${BACKEND_URL}/api/transfer`, {
+    const resp = await fetch(`${BACKEND_URL}/api/transfer/initiate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     const result = await resp.json();
-    console.log('Transfer response:', result); // Debug log
+    console.log('Transfer initiate response:', result);
 
     if (result.success) {
+      if (result.requires_otp) {
+        // Close PIN modal and show OTP modal
+        closeModal('successModal');
+        showOTPModal(result.message, {
+          transfer_code: result.transfer_code,
+          sourceAccount: currentTransferData.sourceKey,
+          amount: currentTransferData.amount,
+          recipientAcct: currentTransferData.acct,
+          recipientBank: currentTransferData.bank,
+          recipientName: currentTransferData.name,
+          narration: currentTransferData.narration
+        });
+        if (hint) hint.textContent = 'Enter your 4-digit transaction PIN';
+        return;
+      }
+
+      // No OTP required – transfer completed
       const ref = result.reference;
       currentTransferData.ref = ref;
-      currentTransferData.timestamp = new Date().toLocaleString('en-NG', {dateStyle:'long',timeStyle:'short'});
+      currentTransferData.timestamp = new Date().toLocaleString('en-NG', { dateStyle: 'long', timeStyle: 'short' });
 
-      // Refresh data
       await loadDashboard();
 
-      // Show success modal
       document.getElementById('txnRefDisplay').textContent = ref;
       document.getElementById('successSubText').textContent =
-        `₦${currentTransferData.amount.toLocaleString('en-NG', {minimumFractionDigits:2})} has been sent to ${currentTransferData.name} — ${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}.`;
+        `₦${currentTransferData.amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })} has been sent to ${currentTransferData.name} — ${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}.`;
       document.getElementById('successSummary').innerHTML = `
         <div class="review-row"><span class="rl">Recipient</span><span class="rv">${currentTransferData.name}</span></div>
         <div class="review-row"><span class="rl">Bank</span><span class="rv">${bankList.find(b => b.code === currentTransferData.bank)?.name || currentTransferData.bank}</span></div>
@@ -1767,18 +1926,215 @@ async function executeTransfer() {
         <div class="review-row"><span class="rl">Date &amp; Time</span><span class="rv">${currentTransferData.timestamp}</span></div>
       `;
       openModal('successModal');
-      const hint = document.getElementById('pinHint');
       if (hint) hint.textContent = 'Enter your 4-digit transaction PIN';
     } else {
-      // Show detailed error from backend
-      const errorMsg = result.error || 'Transfer failed. Please try again.';
-      showToast('Transfer failed: ' + errorMsg, 'error');
+      showToast('Transfer failed: ' + result.error, 'error');
+      if (hint) hint.textContent = 'Enter your 4-digit transaction PIN';
     }
   } catch (err) {
     console.error('Transfer error:', err);
     showToast('Network error – transfer failed.', 'error');
+    if (hint) hint.textContent = 'Enter your 4-digit transaction PIN';
   }
 }
+
+/* ── OTP Functions ── */
+function getOTPValue() {
+  const inputs = document.querySelectorAll('.otp-digit');
+  let otp = '';
+  inputs.forEach(inp => otp += inp.value);
+  return otp;
+}
+
+function clearOTPInputs() {
+  document.querySelectorAll('.otp-digit').forEach(inp => inp.value = '');
+  document.querySelectorAll('.otp-digit')[0].focus();
+}
+
+function showOTPModal(message, transferData) {
+  pendingTransfer = transferData;
+  document.getElementById('otpMessage').textContent = message || 'Enter the OTP sent to your phone/email.';
+  document.getElementById('otpError').classList.remove('show');
+  clearOTPInputs();
+  document.getElementById('otpModal').classList.add('open');
+  startOTPTimer();
+}
+
+function closeOTPModal() {
+  document.getElementById('otpModal').classList.remove('open');
+  stopOTPTimer();
+  pendingTransfer = null;
+}
+
+function startOTPTimer() {
+  otpSecondsRemaining = 300;
+  updateOTPTimerDisplay();
+  stopOTPTimer();
+  otpTimerInterval = setInterval(() => {
+    otpSecondsRemaining--;
+    updateOTPTimerDisplay();
+    if (otpSecondsRemaining <= 0) {
+      stopOTPTimer();
+      document.getElementById('otpTimer').innerHTML = '⏰ OTP expired. Please request a new one.';
+    }
+  }, 1000);
+}
+
+function stopOTPTimer() {
+  if (otpTimerInterval) {
+    clearInterval(otpTimerInterval);
+    otpTimerInterval = null;
+  }
+}
+
+function updateOTPTimerDisplay() {
+  const mins = Math.floor(otpSecondsRemaining / 60);
+  const secs = otpSecondsRemaining % 60;
+  document.getElementById('otpCountdown').textContent = 
+    `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+async function confirmOTP() {
+  const otp = getOTPValue();
+  if (otp.length !== 6) {
+    document.getElementById('otpError').textContent = 'Please enter all 6 digits.';
+    document.getElementById('otpError').classList.add('show');
+    return;
+  }
+  if (!pendingTransfer) {
+    showToast('No pending transfer found.', 'error');
+    return;
+  }
+
+  document.getElementById('otpConfirmBtn').disabled = true;
+  document.getElementById('otpConfirmBtn').textContent = 'Confirming...';
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/transfer/finalize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transfer_code: pendingTransfer.transfer_code,
+        otp: otp,
+        sourceAccount: pendingTransfer.sourceAccount,
+        amount: pendingTransfer.amount,
+        recipientAcct: pendingTransfer.recipientAcct,
+        recipientBank: pendingTransfer.recipientBank,
+        narration: pendingTransfer.narration
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      closeOTPModal();
+      showToast('Transfer completed successfully! 🎉', 'success');
+      await loadDashboard();
+      
+      currentTransferData = {
+        ref: result.reference,
+        amount: pendingTransfer.amount,
+        name: pendingTransfer.recipientName || 'Recipient',
+        bank: pendingTransfer.recipientBank,
+        acct: pendingTransfer.recipientAcct,
+        source: pendingTransfer.sourceAccount,
+        timestamp: new Date().toLocaleString('en-NG', { dateStyle: 'long', timeStyle: 'short' })
+      };
+      
+      document.getElementById('txnRefDisplay').textContent = result.reference;
+      document.getElementById('successSubText').textContent = 
+        `₦${pendingTransfer.amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })} has been sent successfully.`;
+      document.getElementById('successSummary').innerHTML = `
+        <div class="review-row"><span class="rl">Recipient</span><span class="rv">${pendingTransfer.recipientName || 'Recipient'}</span></div>
+        <div class="review-row"><span class="rl">Bank</span><span class="rv">${pendingTransfer.recipientBank}</span></div>
+        <div class="review-row"><span class="rl">Account No.</span><span class="rv">${pendingTransfer.recipientAcct}</span></div>
+        <div class="review-row"><span class="rl">Amount Sent</span><span class="rv">${fmtNaira(pendingTransfer.amount)}</span></div>
+        <div class="review-row"><span class="rl">Reference</span><span class="rv">${result.reference}</span></div>
+      `;
+      openModal('successModal');
+      pendingTransfer = null;
+    } else {
+      if (result.otp_invalid) {
+        document.getElementById('otpError').textContent = 'Invalid OTP. Please check and try again.';
+        document.getElementById('otpError').classList.add('show');
+        clearOTPInputs();
+      } else {
+        showToast('Transfer failed: ' + result.error, 'error');
+        closeOTPModal();
+      }
+    }
+  } catch (err) {
+    console.error('OTP confirmation error:', err);
+    showToast('Network error. Please try again.', 'error');
+  } finally {
+    document.getElementById('otpConfirmBtn').disabled = false;
+    document.getElementById('otpConfirmBtn').textContent = 'Confirm Transfer';
+  }
+}
+
+async function resendOTP() {
+  if (!pendingTransfer || !pendingTransfer.transfer_code) {
+    showToast('No pending transfer to resend OTP for.', 'error');
+    return;
+  }
+  showToast('Requesting new OTP...', 'success');
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/transfer/resend-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transfer_code: pendingTransfer.transfer_code })
+    });
+    const result = await response.json();
+    if (result.success) {
+      showToast('OTP resent! Please check your phone/email.', 'success');
+      document.getElementById('otpError').classList.remove('show');
+      clearOTPInputs();
+      startOTPTimer();
+    } else {
+      showToast('Failed to resend OTP: ' + result.error, 'error');
+    }
+  } catch (err) {
+    console.error('Resend OTP error:', err);
+    showToast('Network error. Please try again.', 'error');
+  }
+}
+
+// ── OTP Input Auto-Focus & Navigation ──
+document.addEventListener('DOMContentLoaded', function() {
+  const otpInputs = document.querySelectorAll('.otp-digit');
+  otpInputs.forEach((input, index) => {
+    input.addEventListener('input', function(e) {
+      this.value = this.value.replace(/\D/g, '');
+      if (this.value.length === 1 && index < otpInputs.length - 1) {
+        otpInputs[index + 1].focus();
+      }
+    });
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Backspace' && this.value === '' && index > 0) {
+        otpInputs[index - 1].focus();
+      }
+      if (e.key === 'Enter') {
+        confirmOTP();
+      }
+    });
+    input.addEventListener('paste', function(e) {
+      e.preventDefault();
+      const paste = (e.clipboardData || window.clipboardData).getData('text');
+      const digits = paste.replace(/\D/g, '').slice(0, 6);
+      digits.split('').forEach((digit, i) => {
+        if (otpInputs[i]) {
+          otpInputs[i].value = digit;
+        }
+      });
+      const nextEmpty = Array.from(otpInputs).find(inp => inp.value === '');
+      if (nextEmpty) {
+        nextEmpty.focus();
+      } else {
+        otpInputs[otpInputs.length - 1].focus();
+      }
+    });
+  });
+});
 
 /* ── Print Receipt ── */
 function printReceipt() {
@@ -1931,7 +2287,6 @@ document.addEventListener('DOMContentLoaded', () => {
   populateBankDropdown();
   loadDashboard();
   setStep(1);
-  // Close modal on overlay click
   document.querySelectorAll('.modal-overlay').forEach(ov => {
     ov.addEventListener('click', e => { if(e.target === ov) ov.classList.remove('open'); });
   });
